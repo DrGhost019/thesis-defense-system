@@ -32,6 +32,52 @@ body {
   transition: background-color 0.2s ease, color 0.2s ease;
 }
 
+/* Persian language numerals: automatic stylistic set 01 (۰-۹) */
+html[lang="fa"],
+html[lang="fa"] body,
+html[lang="fa"] button,
+html[lang="fa"] input:not([type="password"]):not([type="email"]):not([type="date"]),
+html[lang="fa"] select,
+html[lang="fa"] textarea,
+html[lang="fa"] .font-mono,
+html[lang="fa"] code,
+html[lang="fa"] span,
+html[lang="fa"] div,
+html[lang="fa"] p,
+html[lang="fa"] td,
+html[lang="fa"] th,
+html[lang="fa"] h1,
+html[lang="fa"] h2,
+html[lang="fa"] h3,
+html[lang="fa"] h4 {
+  font-feature-settings: "ss01" 1;
+}
+
+html[lang="fa"] .font-mono {
+  font-family: 'Vazirmatn', ui-monospace, monospace;
+}
+
+/* English language numerals: standard Latin digits (0-9) */
+html[lang="en"],
+html[lang="en"] body,
+html[lang="en"] button,
+html[lang="en"] input,
+html[lang="en"] select,
+html[lang="en"] textarea,
+html[lang="en"] .font-mono,
+html[lang="en"] code,
+html[lang="en"] span,
+html[lang="en"] div,
+html[lang="en"] p,
+html[lang="en"] td,
+html[lang="en"] th,
+html[lang="en"] h1,
+html[lang="en"] h2,
+html[lang="en"] h3,
+html[lang="en"] h4 {
+  font-feature-settings: "ss01" 0, normal;
+}
+
 .dark body {
   background-color: #0b0f19;
   color: #f1f5f9;

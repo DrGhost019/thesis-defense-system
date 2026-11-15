@@ -33,7 +33,6 @@ interface AuthContextType {
   lang: "fa" | "en";
   setLang: (l: "fa" | "en") => void;
   calendarType: "jalali" | "gregorian";
-  setCalendarType: (c: "jalali" | "gregorian") => void;
   theme: "light" | "dark";
   setTheme: (t: "light" | "dark") => void;
   toggleTheme: () => void;
@@ -48,7 +47,6 @@ const AuthContext = createContext<AuthContextType>({
   lang: "fa",
   setLang: () => {},
   calendarType: "jalali",
-  setCalendarType: () => {},
   theme: "light",
   setTheme: () => {},
   toggleTheme: () => {},
@@ -75,8 +73,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [lang, setLangState] = useState<"fa" | "en">("fa");
-  const [calendarType, setCalendarTypeState] = useState<"jalali" | "gregorian">("jalali");
   const [theme, setThemeState] = useState<"light" | "dark">("light");
+
+  // When language is Persian (fa), calendar is Solar Hijri (jalali).
+  // When language is English (en), calendar is Gregorian (gregorian).
+  const calendarType: "jalali" | "gregorian" = lang === "fa" ? "jalali" : "gregorian";
 
   const setTheme = (newTheme: "light" | "dark") => {
     setThemeState(newTheme);
@@ -103,13 +104,6 @@ export function Providers({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const setCalendarType = (newCal: "jalali" | "gregorian") => {
-    setCalendarTypeState(newCal);
-    if (typeof window !== "undefined") {
-      localStorage.setItem("app_calendar", newCal);
-    }
-  };
-
   const refetchUser = async () => {
     try {
       const res = await fetch("/api/v1/me");
@@ -132,9 +126,6 @@ export function Providers({ children }: { children: React.ReactNode }) {
       setLangState(savedLang);
       document.documentElement.dir = savedLang === "fa" ? "rtl" : "ltr";
       document.documentElement.lang = savedLang;
-
-      const savedCal = (localStorage.getItem("app_calendar") as "jalali" | "gregorian") || "jalali";
-      setCalendarTypeState(savedCal);
 
       const savedTheme = (localStorage.getItem("app_theme") as "light" | "dark") || "light";
       setThemeState(savedTheme);
@@ -176,7 +167,6 @@ export function Providers({ children }: { children: React.ReactNode }) {
           lang,
           setLang,
           calendarType,
-          setCalendarType,
           theme,
           setTheme,
           toggleTheme,

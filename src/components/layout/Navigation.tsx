@@ -2,6 +2,7 @@
 
 import React from "react";
 import { useAuth } from "../providers";
+import { toPersianDigits } from "@/lib/date-utils";
 import {
   LayoutDashboard,
   CalendarDays,
@@ -124,7 +125,7 @@ export function Navigation({
                       isActive ? "bg-white text-blue-700" : "bg-red-500 text-white animate-pulse"
                     }`}
                   >
-                    {item.badge}
+                    {lang === "fa" ? toPersianDigits(item.badge) : item.badge}
                   </span>
                 )}
               </button>

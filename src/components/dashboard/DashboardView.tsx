@@ -3,7 +3,7 @@
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "../providers";
-import { formatToJalali } from "@/lib/date-utils";
+import { formatToJalali, toTehranDateString } from "@/lib/date-utils";
 import { getTranslations } from "@/lib/translations";
 import { TabId } from "../layout/Navigation";
 import {
@@ -43,7 +43,9 @@ export function DashboardView({ onNavigate }: { onNavigate: (tab: TabId) => void
             <Calendar className="w-3.5 h-3.5" />
             <span>
               {t.dashboard.today}{" "}
-              {calendarType === "jalali" ? formatToJalali("2026-11-15") : "2026-11-15"}
+              {calendarType === "jalali"
+                ? formatToJalali(toTehranDateString(new Date()))
+                : toTehranDateString(new Date())}
             </span>
           </div>
 

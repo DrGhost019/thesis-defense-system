@@ -292,7 +292,9 @@ export function RequestsView() {
                     />
                     {selectedDate && (
                       <span className="text-[10px] text-slate-400 block mt-1">
-                        {lang === "fa" ? "معادل شمسی:" : "Jalali:"} {formatToJalali(selectedDate)}
+                        {lang === "fa"
+                          ? `معادل شمسی: ${formatToJalali(selectedDate)}`
+                          : `Selected Gregorian: ${selectedDate}`}
                       </span>
                     )}
                   </div>

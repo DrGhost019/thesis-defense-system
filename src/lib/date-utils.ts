@@ -253,13 +253,46 @@ export function validateSlotTimes(start: string, end: string): { valid: boolean;
 }
 
 /**
- * Formats a Gregorian date (YYYY-MM-DD) into Jalali string (e.g. ۱۴۰۵/۰۸/۰۳)
+ * Converts English/ASCII digits (0-9) to Persian digits (۰-۹)
  */
-export function formatToJalali(dateStr: string, formatPattern: string = "yyyy/MM/dd"): string {
+export function toPersianDigits(input: string | number | null | undefined): string {
+  if (input === null || input === undefined) return "";
+  const farsiDigits = ["۰", "۱", "۲", "۳", "۴", "۵", "۶", "۷", "۸", "۹"];
+  return String(input).replace(/[0-9]/g, (w) => farsiDigits[+w]);
+}
+
+/**
+ * Converts Persian digits (۰-۹) to English/ASCII digits (0-9)
+ */
+export function toEnglishDigits(input: string | number | null | undefined): string {
+  if (input === null || input === undefined) return "";
+  return String(input).replace(/[۰-۹]/g, (w) => String(w.charCodeAt(0) - 1776));
+}
+
+/**
+ * Formats a number or numeric string according to the active language
+ */
+export function formatDigits(
+  input: string | number | null | undefined,
+  lang: "fa" | "en" = "fa"
+): string {
+  return lang === "fa" ? toPersianDigits(input) : toEnglishDigits(input);
+}
+
+/**
+ * Formats a Gregorian date (YYYY-MM-DD) into Jalali string (e.g. ۱۴۰۵/۰۸/۰۳)
+ * By default converts digits to Persian numbers unless toFarsi is explicitly false.
+ */
+export function formatToJalali(
+  dateStr: string,
+  formatPattern: string = "yyyy/MM/dd",
+  toFarsi: boolean = true
+): string {
   try {
     const d = parseISO(dateStr);
-    return formatJalali(d, formatPattern);
+    const formatted = formatJalali(d, formatPattern);
+    return toFarsi ? toPersianDigits(formatted) : formatted;
   } catch {
-    return dateStr;
+    return toFarsi ? toPersianDigits(dateStr) : dateStr;
   }
 }

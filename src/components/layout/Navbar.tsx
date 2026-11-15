@@ -5,7 +5,6 @@ import { useAuth } from "../providers";
 import {
   LogOut,
   Globe,
-  Calendar,
   UserCheck,
   Shield,
   GraduationCap,
@@ -15,8 +14,7 @@ import {
 } from "lucide-react";
 
 export function Navbar() {
-  const { user, lang, setLang, calendarType, setCalendarType, theme, toggleTheme, logout } =
-    useAuth();
+  const { user, lang, setLang, theme, toggleTheme, logout } = useAuth();
 
   const getRoleBadge = (role?: string) => {
     switch (role) {
@@ -63,24 +61,6 @@ export function Navbar() {
       >
         {/* ================= FAR LEFT ELEMENTS ================= */}
         <div className="flex items-center gap-2 sm:gap-3">
-          {/* Calendar type toggle */}
-          <button
-            onClick={() => setCalendarType(calendarType === "jalali" ? "gregorian" : "jalali")}
-            className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition"
-            title={lang === "fa" ? "تغییر تقویم شمسی/میلادی" : "Toggle Jalali/Gregorian calendar"}
-          >
-            <Calendar className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
-            <span>
-              {calendarType === "jalali"
-                ? lang === "fa"
-                  ? "تقویم شمسی"
-                  : "Jalali Calendar"
-                : lang === "fa"
-                ? "تقویم میلادی"
-                : "Gregorian"}
-            </span>
-          </button>
-
           {/* Language toggle */}
           <button
             onClick={() => setLang(lang === "fa" ? "en" : "fa")}
