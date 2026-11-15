@@ -11,6 +11,7 @@ export const LoginSchema = z
       .max(50, "نام کاربری حداکثر ۵۰ کاراکتر است")
       .regex(/^[a-zA-Z0-9._-]+$/, "نام کاربری فقط می‌تواند شامل حروف، ارقام، نقطه، زیرخط و خط تیره باشد"),
     password: z.string().min(8, "رمز عبور باید حداقل ۸ کاراکتر باشد"),
+    captcha_token: z.string().optional().openapi({ description: "Cloudflare Turnstile token" }),
   })
   .openapi("LoginRequest");
 
