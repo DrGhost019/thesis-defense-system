@@ -1,0 +1,237 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  student
+  professor
+  higher_education_staff
+  admin
+}
+
+enum DegreeLevel {
+  master
+  phd
+}
+
+enum SlotType {
+  single
+  recurring
+}
+
+enum RecurrencePattern {
+  odd_days
+  even_days
+  weekly
+}
+
+enum Weekday {
+  sat
+  sun
+  mon
+  tue
+  wed
+}
+
+enum SlotStatus {
+  available
+  withdrawn
+}
+
+enum SessionStatus {
+  requested
+  assigned
+  confirmed
+  rejected
+  cancelled
+}
+
+enum SeatStatus {
+  pending
+  approved
+  rejected
+}
+
+enum NotificationType {
+  outcome
+  reminder
+}
+
+enum NotificationStatus {
+  pending
+  sent
+  failed
+  skipped
+}
+
+model User {
+  user_id               Int            @id @default(autoincrement())
+  username              String         @unique @db.VarChar(50)
+  password_hash         String         @db.VarChar(255)
+  email                 String?        @unique @db.VarChar(255)
+  full_name             String         @db.VarChar(120)
+  role                  Role
+  is_active             Boolean        @default(true)
+  bale_chat_id          String?        @unique @db.VarChar(32)
+  bale_linked_at        DateTime?
+  bale_link_code        String?        @db.VarChar(12)
+  bale_link_expires_at  DateTime?
+  created_at            DateTime       @default(now())
+
+  student               Student?
+  professor             Professor?
+  created_committees    Committee[]    @relation("CreatedCommittees")
+  created_slots         AvailabilitySlot[] @relation("CreatedSlots")
+  assigned_sessions     DefenseSession[] @relation("AssignedBy")
+  cancelled_sessions    DefenseSession[] @relation("CancelledBy")
+  sent_messages         Message[]
+  received_notifications Notification[]
+  failed_login_attempts FailedLoginAttempt[]
+}
+
+model Student {
+  student_id     Int            @id @default(autoincrement())
+  user_id        Int            @unique
+  user           User           @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  student_number String         @unique @db.VarChar(20)
+  degree_level   DegreeLevel
+  thesis_title   String         @db.VarChar(300)
+  sessions       DefenseSession[]
+}
+
+model Professor {
+  professor_id   Int            @id @default(autoincrement())
+  user_id        Int            @unique
+  user           User           @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  department     String         @db.VarChar(100)
+  academic_title String         @db.VarChar(60)
+  office_location String?       @db.VarChar(100)
+
+  committee_memberships CommitteeMember[]
+  owned_slots    AvailabilitySlot[]
+  seats          DefenseParticipant[]
+}
+
+model Committee {
+  committee_id       Int            @id @default(autoincrement())
+  name               String         @unique @db.VarChar(100)
+  is_active          Boolean        @default(true)
+  created_by_user_id Int
+  created_by         User           @relation("CreatedCommittees", fields: [created_by_user_id], references: [user_id])
+  created_at         DateTime       @default(now())
+
+  members            CommitteeMember[]
+  owned_slots        AvailabilitySlot[]
+}
+
+model CommitteeMember {
+  committee_member_id Int        @id @default(autoincrement())
+  committee_id        Int
+  committee           Committee  @relation(fields: [committee_id], references: [committee_id], onDelete: Cascade)
+  professor_id        Int
+  professor           Professor  @relation(fields: [professor_id], references: [professor_id], onDelete: Cascade)
+
+  @@unique([committee_id, professor_id])
+}
+
+model AvailabilitySlot {
+  slot_id            Int                @id @default(autoincrement())
+  professor_id       Int?
+  professor          Professor?         @relation(fields: [professor_id], references: [professor_id], onDelete: Cascade)
+  committee_id       Int?
+  committee          Committee?         @relation(fields: [committee_id], references: [committee_id], onDelete: Cascade)
+  created_by_user_id Int
+  created_by         User               @relation("CreatedSlots", fields: [created_by_user_id], references: [user_id])
+  slot_type          SlotType
+  slot_date          DateTime?          @db.Date
+  recurrence_pattern RecurrencePattern?
+  weekday            Weekday?
+  start_time         String             @db.VarChar(5)
+  end_time           String             @db.VarChar(5)
+  valid_from         DateTime?          @db.Date
+  valid_until        DateTime?          @db.Date
+  status             SlotStatus         @default(available)
+  created_at         DateTime           @default(now())
+
+  sessions           DefenseSession[]
+}
+
+model DefenseSession {
+  session_id           Int            @id @default(autoincrement())
+  student_id           Int
+  student              Student        @relation(fields: [student_id], references: [student_id], onDelete: Cascade)
+  slot_id              Int?
+  slot                 AvailabilitySlot? @relation(fields: [slot_id], references: [slot_id])
+  scheduled_date       DateTime?      @db.Date
+  start_time           String?        @db.VarChar(5)
+  end_time             String?        @db.VarChar(5)
+  status               SessionStatus  @default(requested)
+  note                 String?        @db.Text
+  created_at           DateTime       @default(now())
+  assigned_by_user_id  Int?
+  assigned_by          User?          @relation("AssignedBy", fields: [assigned_by_user_id], references: [user_id])
+  assigned_at          DateTime?
+  decision_reason      String?        @db.Text
+  confirmed_at         DateTime?
+  cancelled_at         DateTime?
+  cancelled_by_user_id Int?
+  cancelled_by         User?          @relation("CancelledBy", fields: [cancelled_by_user_id], references: [user_id])
+  cancel_reason        String?        @db.Text
+
+  seats                DefenseParticipant[]
+  messages             Message[]
+  notifications        Notification[]
+}
+
+model DefenseParticipant {
+  participant_id Int            @id @default(autoincrement())
+  session_id     Int
+  session        DefenseSession @relation(fields: [session_id], references: [session_id], onDelete: Cascade)
+  professor_id   Int
+  professor      Professor      @relation(fields: [professor_id], references: [professor_id], onDelete: Cascade)
+  status         SeatStatus     @default(pending)
+  responded_at   DateTime?
+
+  @@unique([session_id, professor_id])
+}
+
+model Message {
+  message_id     Int            @id @default(autoincrement())
+  session_id     Int
+  session        DefenseSession @relation(fields: [session_id], references: [session_id], onDelete: Cascade)
+  sender_user_id Int
+  sender         User           @relation(fields: [sender_user_id], references: [user_id])
+  content        String         @db.Text
+  sent_at        DateTime       @default(now())
+}
+
+model Notification {
+  notification_id   Int                @id @default(autoincrement())
+  session_id        Int
+  session           DefenseSession     @relation(fields: [session_id], references: [session_id], onDelete: Cascade)
+  recipient_user_id Int
+  recipient         User               @relation(fields: [recipient_user_id], references: [user_id])
+  type              NotificationType
+  scheduled_for     DateTime
+  sent_at           DateTime?
+  status            NotificationStatus @default(pending)
+  failure_reason    String?            @db.VarChar(200)
+  retry_count       Int                @default(0)
+
+  @@unique([session_id, recipient_user_id, type])
+}
+
+model FailedLoginAttempt {
+  id           Int      @id @default(autoincrement())
+  username     String   @db.VarChar(50)
+  user_id      Int?
+  user         User?    @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  attempted_at DateTime @default(now())
+
+  @@index([username, attempted_at])
+}

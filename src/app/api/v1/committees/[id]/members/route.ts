@@ -1,0 +1,32 @@
+import { NextRequest } from "next/server";
+import { getAuthenticatedUser, hasRole } from "@/lib/server-auth";
+import { CommitteeService } from "@/services/CommitteeService";
+import { apiSuccess, apiError } from "@/lib/api-response";
+
+export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+  const authUser = await getAuthenticatedUser(req);
+  if (!authUser) {
+    return apiError("UNAUTHENTICATED", "ابتدا وارد سیستم شوید", 401);
+  }
+  if (!hasRole(authUser, ["admin"])) {
+    return apiError("FORBIDDEN", "دسترسی مجاز نمی‌باشد", 403);
+  }
+
+  const committeeId = parseInt(params.id, 10);
+  if (isNaN(committeeId)) {
+    return apiError("VALIDATION_ERROR", "شناسه هیئت داوران نامعتبر است", 422);
+  }
+
+  const body = await req.json().catch(() => ({}));
+  const professorId = parseInt(body.professor_id, 10);
+  if (isNaN(professorId)) {
+    return apiError("VALIDATION_ERROR", "شناسه استاد الزامی است", 422);
+  }
+
+  const result = await CommitteeService.addMember(committeeId, professorId);
+  if (!result.success) {
+    return apiError(result.code as any, result.message!, result.status || 400);
+  }
+
+  return apiSuccess(result.member, 201);
+}

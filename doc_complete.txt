@@ -1,0 +1,10045 @@
+Thesis Defense Scheduling System
+Complete Project Documentation (Version 2)
+From requirements and design to implementation, testing and deployment
+
+Item
+
+Detail
+
+Project
+
+University internship project: web and Android applications on a shared back-end
+
+Purpose
+
+Allow Master's and PhD students to request thesis defenses, professors and committees to publish
+availability, and the administration to assign defenses, with notifications through a Bale bot
+
+Version
+
+2, incorporating the supervisor's changes
+
+Date
+
+19 October 2026
+
+Scope of this document
+
+Introduction, requirements, architecture, ERD, DFD, swimlane, UML, API, interface, security, Bale
+integration, testing, deployment, plan, risks
+
+Format
+
+Text and tables only; the diagram images are not included
+
+Thesis Defense Scheduling System | Complete Project Documentation (v2)
+
+Page 1
+
+Contents
+Section
+
+Title
+
+1
+
+Introduction
+
+2
+
+Requirements
+
+3
+
+System Architecture
+
+4
+
+Entity-Relationship Design (ERD)
+
+5
+
+Data Flow Design (DFD)
+
+6
+
+Swimlane Design
+
+7
+
+UML Design
+
+8
+
+API Contract
+
+9
+
+User Interface Design
+
+10
+
+Security and Privacy
+
+11
+
+Bale Notification Integration
+
+12
+
+Testing and Quality Assurance
+
+13
+
+Deployment and Operations
+
+14
+
+Project Plan
+
+15
+
+Risk Management
+
+16
+
+Open Questions and Future Work
+
+17
+
+Glossary
+
+Thesis Defense Scheduling System | Complete Project Documentation (v2)
+
+Page 2
+
+1. Introduction
+1.1 Purpose of the document
+This document records the design of the Thesis Defense Scheduling System in its second version. It explains what
+the system must do, which data it stores, and how that data moves between people, processes and storage. It is
+written so that a developer can build the back-end and both client applications from it, and so that a supervisor can
+check each requirement against a precise description. Every design element comes with a short rationale, so the
+reasons behind each decision remain visible.
+
+1.2 Background and problem statement
+At present a Master's or PhD student who is ready to defend a thesis must find a date that suits every professor
+involved. This normally happens through phone calls, messages and visits to offices. The effort is repeated for
+each professor, information about who is free is scattered, and defenses are sometimes missed because a
+participant forgets the date. The university wants one platform, available on the web and on Android, that publishes
+when professors and committees are available, lets students request a defense in a few steps, lets the
+administration decide who and when, and reminds everybody before the defense.
+
+1.3 Scope
+In scope. Account management and login for all roles; definition of availability by professors and by committees,
+as single or recurring slots; a weekly schedule grid that can be viewed and downloaded as PDF; defense requests
+submitted by students; assignment of each request to a slot and professor or committee by the administrator;
+approval or rejection by the assigned professors; cancellation; messaging inside confirmed defenses; and
+notifications through a Bale bot.
+Out of scope. Grading, thesis document storage, room booking, payments, and any notification channel other
+than the in-app notices and the Bale bot. Rescheduling is not a separate function: it is a cancellation followed by a
+new request.
+
+1.4 Users and roles
+Role
+
+Who they are
+
+Main capabilities in version 2
+
+Student
+
+Master's or PhD student
+
+Logs in, views and downloads the weekly schedule, submits a
+defense request (thesis details and an optional note only), follows the
+request status, messages the committee after confirmation, cancels a
+defense, links a Bale account.
+
+Professor / Higher
+Education staff
+
+Faculty member or Higher Education Defines single or recurring availability slots (for self or for a committee
+Department staff member; one role
+they belong to), views the weekly schedule, approves or rejects
+value pair with the same capabilities assigned defenses, messages the student, cancels a defense, links a
+Bale account.
+
+Administrator
+
+Account and scheduling manager
+
+Creates and deactivates accounts, defines committees and their
+members, reviews student requests, assigns each request to a slot
+and professor or committee (or declines it), views the weekly
+schedule.
+
+Bale Messenger
+Platform (external)
+
+Third-party messaging service that
+hosts the bot
+
+Delivers notifications to users and reports delivery status and
+account-link events back to the system.
+
+Daily timer (internal)
+
+Scheduled job inside the back-end
+
+Starts the one-day-before reminder run every day.
+
+Thesis Defense Scheduling System | Complete Project Documentation (v2)
+
+Page 3
+
+1.5 Objectives
+• One shared view of availability: every professor and committee publishes time once, and everyone sees it in
+one weekly grid.
+
+• Simple student requests: a student submits a request without knowing or contacting any professor.
+• Organizational control: the administrator, who knows workloads and committee rules, decides the slot and the
+professor or committee.
+
+• Fewer missed defenses: a reminder reaches each participant one day before the defense, through the
+messenger they actually use.
+
+• Transparency and traceability: every request keeps a status and a history of who decided what and when.
+• One back-end for two clients: the web and Android applications use the same data model and rules.
+
+1.6 Summary of the version 2 changes
+The supervisor requested three changes. All other behavior of version 1 stays as it was. The table shows each
+change and where it affects the design.
+#
+
+Requested change
+
+Effect on the design
+
+C1
+
+Professors or committees define available slots,
+either single or recurring (for example odd or even
+days).
+
+New Committee and CommitteeMember entities; AvailabilitySlot gains an
+owner (professor or committee), a slot type and recurrence fields; process
+2.0 manages committees and slots.
+
+C2
+
+Students view or download a weekly schedule grid
+(Saturday to Wednesday, 8:00 to 17:00) showing
+the professor or committee name and whether
+each slot is single or recurring.
+
+New process 3.0 Provide weekly schedule; the grid is generated from slot
+data, not stored; PDF export.
+
+C3
+
+Students only submit a request and do not choose
+a professor; the administrator assigns the student
+to a slot and professor or committee.
+
+Student-side committee selection and common-free-time calculation are
+removed; new process 5.0 Assign defense request; DefenseSession gains
+assignment fields and a new "requested" status; DefenseParticipant loses
+its slot link.
+
+C4
+
+Notifications (request outcome and one-day
+reminder) move from email to a Bale bot.
+
+Email Service is replaced by the Bale Messenger Platform;
+ReminderEmail becomes Notification; User gains Bale linking attributes;
+process 9.0 sends Bale notifications and records delivery.
+
+1.7 Design decisions
+Decision
+
+Description and reason
+
+Committee-based defenses
+
+A defense can involve several professors. One DefenseSession has one DefenseParticipant per
+professor, and the session is confirmed only when all participants approve.
+
+Admin-assigned scheduling
+
+Only the administrator links a request to a slot. Students never see a professor list for choosing,
+which removes the negotiation the brief wants to avoid.
+
+Occupancy belongs to a date, not
+to a slot
+
+A recurring slot repeats, so it cannot be "reserved" as a whole. The booking is stored on the
+session as a concrete date; the slot stays available for its other dates.
+
+Grid is derived data
+
+The weekly grid is computed from slots on demand, so it is always current and needs no storage
+or synchronization.
+
+Notifications go through one log
+
+Every Bale message is recorded in a single Notification table, which allows retries, prevents
+duplicates and supports troubleshooting.
+
+In-app notices remain
+
+Notices inside the application (new request, assignment, cancellation) are unchanged. Only the
+outcome and the reminder travel by Bale.
+
+Simple cancellation
+
+Either the student or an assigned professor can cancel; rescheduling is a cancellation followed by
+a new request.
+
+Thesis Defense Scheduling System | Complete Project Documentation (v2)
+
+Page 4
+
+1.8 Assumptions to be confirmed
+#
+
+Assumption
+
+If it is wrong
+
+A1
+
+Professors still approve or reject after the administrator assigns a defense
+(version 1 behavior is kept because the supervisor said other features stay
+unchanged).
+
+Remove DefenseParticipant approvals, the
+"assigned" status and process 6.0; the
+administrator's assignment would confirm the
+session directly.
+
+A2
+
+"Odd days" and "even days" mean the weekdays counted from Saturday:
+odd days are Saturday, Monday and Wednesday; even days are Sunday
+and Tuesday.
+
+If odd and even dates of the month are meant, the
+recurrence attributes and the grid expansion rule
+change.
+
+A3
+
+After a rejection the student submits a new request; the administrator does
+not automatically reassign it.
+
+Add a "reassign" transition from rejected back to
+requested.
+
+A4
+
+A user without a linked Bale account still sees every status in the
+application; the Bale message is recorded as "skipped".
+
+If Bale linking is mandatory, add a check at login
+or at request submission.
+
+A5
+
+Committees are created and maintained by the administrator; any
+professor who belongs to a committee can define slots for it.
+
+If only the administrator may define committee
+slots, restrict process 2.0 accordingly.
+
+1.9 How to read this document
+The document follows the life of the project. Section 2 lists the requirements and section 3 the architecture.
+Sections 4 to 7 give the complete design: the data model (ERD), the data flows (DFD), the swimlane scenarios and
+the UML models. Sections 8 to 11 define the API, the user interface, security and the Bale integration. Sections 12
+to 15 cover testing, deployment, the project plan and risks. Section 16 lists open questions and future work, and
+section 17 is the glossary. Names are consistent throughout: an entity such as AvailabilitySlot in the ERD is the
+data store D3 in the DFD, the class AvailabilitySlot in the UML, and the screen My slots in the interface.
+
+Thesis Defense Scheduling System | Complete Project Documentation (v2)
+
+Page 5
+
+2. Requirements
+This section turns the project brief and the supervisor's changes into a numbered catalogue of requirements. Each
+functional requirement (FR) has an identifier so that later sections, the tests and the acceptance review can refer to
+it. Priority uses three levels: Must (the system is not acceptable without it), Should (important, but a workaround
+exists) and Could (valuable if time allows).
+
+2.1 Stakeholders and their interests
+Stakeholder
+
+Interest in the system
+
+Influence on the design
+
+Students
+
+A simple way to ask for a defense and to see when
+professors are available; timely news about the
+outcome.
+
+Single-screen request form, visible weekly grid,
+Bale outcome message.
+
+Professors and staff
+
+Control over their own availability; clear lists of what
+needs an answer; fewer interruptions.
+
+Slot management with recurrence,
+assigned-request list, reminders.
+
+Administrator (Higher
+Education Department)
+
+Organizational control over who defends when; less
+manual coordination; an audit trail.
+
+Assignment function, committee management,
+full status history.
+
+Project supervisor
+
+A solution that follows the university's way of working:
+admin assignment, weekly schedule, Bale bot.
+
+Version 2 changes C1 to C4.
+
+Android developer
+(project partner)
+
+A stable, documented API and consistent data rules
+shared with the web client.
+
+Versioned REST API, one error format, no
+web-only logic.
+
+Web developer (author)
+
+A design that can be implemented step by step and
+tested independently.
+
+Service layer mapped to DFD processes, clear
+module boundaries.
+
+University IT
+
+Security, backups, low maintenance cost.
+
+Standard stack, scripted deployment,
+monitoring.
+
+2.2 Functional requirements
+ID
+
+Requirement
+
+Priorit
+y
+
+Role
+
+DFD
+
+UML
+
+FR-01
+
+Any user can log in with username and password.
+
+Must
+
+All
+
+1.0
+
+UC1
+
+FR-02
+
+After login the system shows the interface of the user's role.
+
+Must
+
+All
+
+1.0
+
+UC1
+
+FR-03
+
+The administrator can create accounts for students, professors, staff and
+administrators.
+
+Must
+
+Administrator
+
+1.0
+
+UC2
+
+FR-04
+
+The administrator can deactivate an account without deleting its history.
+
+Must
+
+Administrator
+
+1.0
+
+UC2
+
+FR-05
+
+A deactivated account cannot log in.
+
+Must
+
+All
+
+1.0
+
+UC1
+
+FR-06
+
+A user can link a Bale account by requesting a one-time code and sending
+it to the bot.
+
+Must
+
+Student,
+Professor
+
+1.0
+
+UC3
+
+FR-07
+
+The link code expires and works only once.
+
+Must
+
+Student,
+Professor
+
+1.0
+
+UC3
+
+FR-08
+
+The administrator can create a committee with a unique name and a list of
+member professors.
+
+Must
+
+Administrator
+
+2.0
+
+UC4
+
+FR-09
+
+The administrator can add or remove members and deactivate a
+committee.
+
+Should
+
+Administrator
+
+2.0
+
+UC4
+
+FR-10
+
+A professor can define a single slot (one date, start and end time) for self.
+
+Must
+
+Professor
+
+2.0
+
+UC5
+
+FR-11
+
+A professor can define a recurring slot with pattern odd days, even days or
+weekly (with weekday) and a validity range.
+
+Must
+
+Professor
+
+2.0
+
+UC5
+
+FR-12
+
+A professor who belongs to a committee can define single or recurring
+slots owned by that committee.
+
+Must
+
+Professor
+
+2.0
+
+UC5
+
+FR-13
+
+Slots must lie on Saturday to Wednesday between 08:00 and 17:00, and
+end after they start.
+
+Must
+
+Professor
+
+2.0
+
+UC5
+
+FR-14
+
+A new slot must not overlap another slot of the same owner.
+
+Should
+
+Professor
+
+2.0
+
+UC5
+
+Thesis Defense Scheduling System | Complete Project Documentation (v2)
+
+Page 6
+
+ID
+
+Requirement
+
+Priorit
+y
+
+Role
+
+DFD
+
+UML
+
+FR-15
+
+A professor can withdraw a slot; it disappears from the grid but stays on
+record.
+
+Must
+
+Professor
+
+2.0
+
+UC6
+
+FR-16
+
+Any logged-in user can view a weekly grid (Saturday to Wednesday, 08:00
+to 17:00).
+
+Must
+
+All
+
+3.0
+
+UC7
+
+FR-17
+
+Each cell shows the professor or committee name and whether the slot is
+single or recurring.
+
+Must
+
+All
+
+3.0
+
+UC7
+
+FR-18
+
+The weekly grid can be downloaded as a PDF with the same layout.
+
+Must
+
+All
+
+3.0
+
+UC8
+
+FR-19
+
+The user can move between weeks.
+
+Should
+
+All
+
+3.0
+
+UC7
+
+FR-20
+
+Students cannot select a slot or a professor on the grid; it is read-only for
+them.
+
+Must
+
+Student
+
+3.0
+
+UC7
+
+FR-21
+
+A student can submit a defense request with an optional note and no
+professor choice.
+
+Must
+
+Student
+
+4.0
+
+UC9
+
+FR-22
+
+A student can have only one active request (requested, assigned or
+confirmed).
+
+Must
+
+Student
+
+4.0
+
+UC9
+
+FR-23
+
+A student can follow the status of the request.
+
+Must
+
+Student
+
+4.0
+
+UC10
+
+FR-24
+
+The administrator can list requests waiting for assignment.
+
+Must
+
+Administrator
+
+5.0
+
+UC11
+
+FR-25
+
+The administrator can assign a request to a slot and a concrete date.
+
+Must
+
+Administrator
+
+5.0
+
+UC12
+
+FR-26
+
+The same slot occurrence (slot and date) cannot be assigned to two active
+sessions.
+
+Must
+
+Administrator
+
+5.0
+
+UC12
+
+FR-27
+
+A professor cannot be assigned to overlapping active sessions.
+
+Should
+
+Administrator
+
+5.0
+
+UC12
+
+FR-28
+
+Assignment creates one pending seat per professor (one for a professor
+slot, one per member for a committee slot).
+
+Must
+
+System
+
+5.0
+
+UC12
+
+FR-29
+
+The administrator can decline a request and must give a reason shown to
+the student.
+
+Must
+
+Administrator
+
+5.0
+
+UC13
+
+FR-30
+
+A professor can list the defenses assigned to them that await an answer.
+
+Must
+
+Professor
+
+6.0
+
+UC14
+
+FR-31
+
+A professor can approve or reject an assigned defense.
+
+Must
+
+Professor
+
+6.0
+
+UC14
+
+FR-32
+
+The session is confirmed only when every seat is approved.
+
+Must
+
+System
+
+6.0
+
+UC14
+
+FR-33
+
+One rejection rejects the session and frees the date.
+
+Must
+
+System
+
+6.0
+
+UC14
+
+FR-34
+
+The student or an assigned professor can cancel an assigned or
+confirmed session, with an optional reason.
+
+Must
+
+Student,
+Professor
+
+7.0
+
+UC15
+
+FR-35
+
+Cancellation informs the other parties in the application and frees the date.
+
+Must
+
+System
+
+7.0
+
+UC15,
+UC19
+
+FR-36
+
+Participants can send messages in a confirmed session.
+
+Must
+
+Student,
+Professor
+
+8.0
+
+UC16
+
+FR-37
+
+Participants can read the message thread.
+
+Must
+
+Student,
+Professor
+
+8.0
+
+UC17
+
+FR-38
+
+Messages are accepted only in confirmed sessions and only from
+members.
+
+Must
+
+System
+
+8.0
+
+UC16
+
+FR-39
+
+The request outcome (confirmed, rejected, declined) is sent to the student
+and professors through Bale.
+
+Must
+
+System
+
+9.0
+
+UC18
+
+FR-40
+
+A reminder is sent through Bale to the student and each professor one day
+before a confirmed defense.
+
+Must
+
+System
+
+9.0
+
+UC18
+
+FR-41
+
+No recipient receives the same type of message twice for one session.
+
+Must
+
+System
+
+9.0
+
+UC18
+
+FR-42
+
+A recipient without a linked Bale account is skipped and still sees every
+status in the application.
+
+Must
+
+System
+
+9.0
+
+UC18
+
+FR-43
+
+Failed Bale messages are retried at the next run.
+
+Should
+
+System
+
+9.0
+
+UC18
+
+FR-44
+
+The application shows in-app notices for new requests, assignments and
+cancellations.
+
+Should
+
+All
+
+4.0, 5.0,
+7.0
+
+UC19
+
+FR-45
+
+Every Bale message and its status is recorded in a notification log.
+
+Must
+
+System
+
+9.0
+
+UC18
+
+Thesis Defense Scheduling System | Complete Project Documentation (v2)
+
+Page 7
+
+2.3 Non-functional requirements
+ID
+
+Category
+
+Requirement
+
+How it is verified
+
+NFR-01
+
+Performance
+
+The weekly grid for any week loads in under 2 seconds for up to
+500 slots; PDF export completes in under 5 seconds.
+
+Load test with generated slots.
+
+NFR-02
+
+Capacity
+
+The system supports at least 2,000 accounts and 300 simultaneous
+users without degradation.
+
+Load test.
+
+NFR-03
+
+Availability
+
+The service is available at least 99% of the time during working
+hours (Saturday to Wednesday, 07:00 to 19:00).
+
+Uptime monitoring.
+
+NFR-04
+
+Security
+
+Passwords are stored hashed; all traffic uses HTTPS; every
+endpoint checks the role.
+
+Security review, tests in section 12.
+
+NFR-05
+
+Data integrity
+
+Double booking is impossible even when two administrators assign
+at the same moment.
+
+Concurrency test and database
+constraint.
+
+NFR-06
+
+Usability
+
+A student can submit a request in under two minutes after login
+without training.
+
+Usability test with five students.
+
+NFR-07
+
+Localization
+
+The interface supports Persian (right to left) and English; dates can
+be shown in the Jalali calendar; the week starts on Saturday.
+
+Interface review.
+
+NFR-08
+
+Time handling
+
+All times are stored consistently and shown in Asia/Tehran time.
+
+Unit tests of date logic.
+
+NFR-09
+
+Compatibility
+
+The web client works in current versions of Chrome, Edge, Firefox
+and Safari; the Android client uses the same API.
+
+Browser test list.
+
+NFR-10
+
+Maintainability
+
+Each DFD process is one service module with its own tests; no
+business rule lives only in a client.
+
+Code review.
+
+NFR-11
+
+Auditability
+
+Who assigned, answered, cancelled and when is recorded for
+every session.
+
+Database inspection and tests.
+
+NFR-12
+
+Resilience
+
+A Bale outage never blocks scheduling; failed messages are
+retried.
+
+Failure-injection test.
+
+NFR-13
+
+Privacy
+
+Only data needed for scheduling is stored; Bale chat ids are visible
+only to the system.
+
+Privacy review.
+
+NFR-14
+
+Backup
+
+Daily database backup, restorable within one hour.
+
+Restore drill.
+
+2.4 Constraints and assumptions
+• Platforms: web application and Android application on one shared back-end. The web application is built by
+the author; the Android application by a project partner.
+
+• Notification channel: only Bale (and in-app notices). Email is not used for notifications.
+• Calendar: the working week is Saturday to Wednesday, 08:00 to 17:00. Odd days are Saturday, Monday and
+Wednesday; even days are Sunday and Tuesday (confirmed).
+
+• Approval: professors approve or reject after the administrator assigns the defense (confirmed).
+• Reminder timing: the daily reminder run happens once per day in the morning (assumed 09:00 Tehran time)
+and covers defenses dated the next day.
+
+• Single university: one institution, one administrator group; multi-tenant operation is not required.
+• Internship setting: the project is delivered in a limited period by one web developer, so the design favors
+simple, proven techniques.
+
+2.5 Acceptance criteria for the main features
+Feature
+
+Acceptance criteria
+
+Recurring slots
+
+Given an odd-days slot from 09:00 to 11:00, the grid shows it in the Saturday, Monday and Wednesday
+columns of every week in its validity range and in no other column.
+
+Weekly grid
+
+Each cell shows the owner name and the label Single or Recurring; withdrawn slots are not shown; the PDF
+matches the screen.
+
+Thesis Defense Scheduling System | Complete Project Documentation (v2)
+
+Page 8
+
+Feature
+
+Acceptance criteria
+
+Student request
+
+The form has no professor field; submitting creates a session with status requested; a second submission
+while one is active is refused.
+
+Assignment
+
+Assigning an occurrence already used by an active session is refused; a successful assignment creates the
+correct number of seats and notifies the professors.
+
+Confirmation
+
+The session becomes confirmed only after the last seat is approved; one rejection immediately rejects it and
+frees the date.
+
+Bale outcome
+
+Within one minute of the final decision, every linked recipient has a Bale message and a notification record
+with status sent.
+
+Bale reminder
+
+The day before the defense, each linked participant receives exactly one reminder; unlinked participants have
+status skipped.
+
+Cancellation
+
+After cancellation the occurrence can be assigned to another request.
+
+Messaging
+
+A message in a session that is not confirmed, or from a non-member, is refused.
+
+2.6 Out of scope
+The following are deliberately excluded to keep the project deliverable: grading and evaluation forms, thesis file
+storage, room and equipment booking, video-conference integration, payments, email or SMS notification, and
+administration of several universities. Some of these appear as ideas for future work in section 16.
+
+3. System Architecture
+3.1 Architectural overview
+The system follows a classic three-tier structure with one shared back-end. The web client and the Android client
+are thin: they show data and send commands, and every business rule (validation, assignment checks,
+confirmation, notification) is implemented once in the back-end. This guarantees that both clients behave
+identically and keeps the Android work independent of the web work, since both depend only on the API contract in
+section 8.
+Tier
+
+Component
+
+Responsibility
+
+Presentation
+
+Web application, Android application
+
+Screens, forms, the weekly grid view, local input checks for
+convenience only.
+
+Application
+
+REST API with service modules
+
+Authentication, authorization, the service classes of section 7.4,
+scheduled jobs, PDF generation.
+
+Data
+
+Relational database
+
+The ten entities of section 4 with their constraints; the final guard
+against invalid data.
+
+Integration
+
+Bale bot gateway
+
+Sends messages through the Bale bot API and receives link
+events.
+
+3.2 Logical components
+Component
+
+Maps to
+
+Description
+
+Auth module
+
+AuthService, process 1.0
+
+Login, token issue, role checks, Bale link codes.
+
+Committee and slot module
+
+CommitteeService, SlotService,
+process 2.0
+
+Committees, single and recurring slots, validation.
+
+Schedule module
+
+ScheduleService, process 3.0
+
+Builds the weekly grid from slots; renders the PDF.
+
+Request module
+
+RequestService, process 4.0
+
+Student requests and the one-active-request rule.
+
+Assignment module
+
+AssignmentService, process 5.0
+
+Administrator assignment, seat creation, double-booking
+protection.
+
+Response module
+
+ResponseService, process 6.0
+
+Seat decisions and session result.
+
+Thesis Defense Scheduling System | Complete Project Documentation (v2)
+
+Page 9
+
+Component
+
+Maps to
+
+Description
+
+Cancellation module
+
+CancellationService, process 7.0
+
+Cancellation and freeing of the date.
+
+Messaging module
+
+MessageService, process 8.0
+
+Messages of confirmed sessions.
+
+Notification module
+
+NotificationService, BaleGateway,
+DailyScheduler, process 9.0
+
+Notification log, Bale sending, retries, daily reminder job.
+
+3.3 Recommended technology stack
+The brief does not prescribe a technology. The table gives a recommendation that matches the author's
+experience (React, Next.js, TypeScript) and keeps the stack small. It can be replaced without changing the design
+in the earlier sections.
+Concern
+
+Recommendation
+
+Reason
+
+Web front end
+
+React with Next.js and TypeScript
+
+Existing experience; server rendering helps the
+schedule page; shared types with the API.
+
+Back end
+
+TypeScript on Node.js, as a modular REST API (for
+example NestJS, or Next.js route handlers organized
+by module)
+
+One language across the stack; modules map
+one-to-one to DFD processes.
+
+Database
+
+PostgreSQL
+
+Supports partial unique indexes and check
+constraints needed for the rules in section 4.6.
+
+Data access
+
+An ORM with migrations (for example Prisma)
+
+Typed models, versioned schema changes.
+
+Authentication
+
+Password hashing with Argon2 or bcrypt; short-lived
+access token plus refresh token
+
+Standard, works for web and Android.
+
+PDF generation
+
+Server-side rendering of the grid to PDF (HTML to
+PDF or a PDF library)
+
+Same layout for every client; no client-side
+dependency.
+
+Scheduler
+
+A cron-style job inside the back-end or the operating
+system scheduler
+
+Needed only for the daily reminder and retries.
+
+Bale integration
+
+HTTPS calls to the Bale bot API (Telegram-style bot
+interface); webhook for link events
+
+Official bot mechanism; details to be confirmed
+against Bale's current documentation.
+
+Android client
+
+Native or cross-platform app consuming the same
+REST API
+
+Chosen by the project partner.
+
+Hosting
+
+One Linux server or virtual machine with a reverse
+proxy and HTTPS
+
+Adequate for the expected load; simple to operate.
+
+3.4 Deployment view
+Node
+
+Contents
+
+Notes
+
+Client devices
+
+Browser (web app); Android phone (Android app)
+
+Both reach the server over HTTPS.
+
+Reverse proxy
+
+TLS termination, static assets, request limits
+
+Also forwards the Bale webhook.
+
+Application server
+
+Web application, REST API, scheduler
+
+One process group; can be split later.
+
+Database server
+
+PostgreSQL
+
+Daily backups; access only from the
+application server.
+
+Bale Platform (external)
+
+Bot API
+
+Outbound calls from the server; inbound
+webhook to the proxy.
+
+Thesis Defense Scheduling System | Complete Project Documentation (v2)
+
+Page 10
+
+3.5 Cross-cutting design principles
+• One rule, one place: business rules are in services; clients never decide whether an action is allowed.
+• The database is the last line of defense: unique indexes and check constraints reject invalid data even if a
+service has a bug.
+
+• Derived data is not stored: the weekly grid and the occupancy of a recurring slot are computed from slots and
+sessions.
+
+• Failures are isolated: a Bale failure marks a notification as failed; it never rolls back a scheduling decision.
+• Every change is attributable: assignment, answers and cancellations store who and when.
+• Idempotent jobs: the daily job can be run twice without sending duplicates, thanks to the unique notification
+key.
+
+Thesis Defense Scheduling System | Complete Project Documentation (v2)
+
+Page 11
+
+4. Entity-Relationship Design
+4.1 Overview
+The data model has ten entities. User holds every account; Student and Professor extend it with role-specific
+details. Committee and CommitteeMember describe standing groups of professors. AvailabilitySlot records
+published time, owned by one professor or one committee. DefenseSession records one student's defense request
+through its whole life, DefenseParticipant records each professor's decision on it, Message holds the conversation,
+and Notification logs each Bale message. Keys are surrogate integers; foreign keys use the suffix _id.
+
+4.2 Entity summary
+Entity
+
+Status in v2
+
+Purpose (one sentence)
+
+User
+
+Changed
+
+Stores the shared login account, role and Bale link for every person, so one
+authentication mechanism serves all roles on both clients.
+
+Student
+
+Unchanged
+
+Holds student-only details such as degree level and thesis title, because these do not
+apply to other roles.
+
+Professor
+
+Unchanged
+
+Holds professor and staff details such as department and title, which Higher Education
+staff share because they have the same capabilities.
+
+Committee
+
+New
+
+Represents a named standing group of professors that can publish availability as one
+unit and appear by name on the weekly grid.
+
+CommitteeMember
+
+New
+
+Links professors to committees, resolving the many-to-many relationship between
+them.
+
+AvailabilitySlot
+
+Changed
+
+Records a time block published by a professor or a committee, either on one date or
+recurring, which is the raw material of the weekly grid.
+
+DefenseSession
+
+Changed
+
+Represents one student's defense request and its assigned date, from submission to
+confirmation, rejection or cancellation.
+
+DefenseParticipant
+
+Changed
+
+Records each assigned professor's own response, so every professor decides
+independently while the session follows the combined result.
+
+Message
+
+Unchanged
+
+Stores the conversation between the student and the committee inside a confirmed
+session.
+
+Notification
+
+Replaces
+ReminderEmail
+
+Logs every Bale message (outcome or reminder) with its delivery status, which
+supports retries and prevents duplicates.
+
+4.3 Attributes by entity
+In the tables, PK is a primary key, FK a foreign key, UQ a unique constraint, NN not null and NULL a value that
+may be empty. Each row ends with a one-sentence rationale.
+
+4.3.1 User
+Every account, whatever the role, so login and notification logic exist only once.
+Attribute
+
+Type
+
+Constraints
+
+Rationale
+
+user_id
+
+INT
+
+PK
+
+Uniquely identifies the account and is the reference every other
+table uses for a person.
+
+username
+
+VARCHAR(50)
+
+UQ, NN
+
+Holds the login name; unique so two accounts cannot be
+confused.
+
+password_hash
+
+VARCHAR(255)
+
+NN
+
+Stores a hashed password so credentials are never kept in
+readable form.
+
+email
+
+VARCHAR(255)
+
+UQ, NULL
+
+Keeps an optional contact address; it is no longer used for
+notifications, so it may be empty.
+
+Thesis Defense Scheduling System | Complete Project Documentation (v2)
+
+Page 12
+
+Attribute
+
+Type
+
+Constraints
+
+Rationale
+
+full_name
+
+VARCHAR(120)
+
+NN
+
+Gives the name displayed on the schedule grid, in requests
+and in messages.
+
+role
+
+ENUM Role
+
+NN
+
+Tells the system which interface and functions the user may
+access after login.
+
+is_active
+
+BOOLEAN
+
+NN, default true
+
+Lets the administrator deactivate an account without deleting
+its history.
+
+bale_chat_id
+
+VARCHAR(32)
+
+UQ, NULL
+
+Stores the Bale chat the bot writes to; empty until the user links
+an account.
+
+bale_linked_at
+
+DATETIME
+
+NULL
+
+Records when the Bale account was linked, for support and
+auditing.
+
+bale_link_code
+
+VARCHAR(12)
+
+NULL
+
+Holds the one-time code the user sends to the bot to prove the
+account is theirs.
+
+bale_link_expires_at
+
+DATETIME
+
+NULL
+
+Limits the lifetime of the code so an old code cannot be reused.
+
+created_at
+
+DATETIME
+
+NN
+
+Records when the account was created, for auditing.
+
+4.3.2 Student
+Student-specific profile; exists only for accounts with the student role.
+Attribute
+
+Type
+
+Constraints
+
+Rationale
+
+student_id
+
+INT
+
+PK
+
+Uniquely identifies the student profile.
+
+user_id
+
+INT
+
+FK, UQ, NN
+
+Links to the login account; unique so one account has at most
+one student profile.
+
+student_number
+
+VARCHAR(20)
+
+UQ, NN
+
+Holds the university identifier and prevents duplicate students.
+
+degree_level
+
+ENUM
+DegreeLevel
+
+NN
+
+Distinguishes Master's from PhD students, since the system
+serves both.
+
+thesis_title
+
+VARCHAR(300)
+
+NN
+
+Tells the administrator and professors which thesis the request
+concerns.
+
+4.3.3 Professor
+Profile for professors and Higher Education staff.
+Attribute
+
+Type
+
+Constraints
+
+Rationale
+
+professor_id
+
+INT
+
+PK
+
+Uniquely identifies the professor or staff profile.
+
+user_id
+
+INT
+
+FK, UQ, NN
+
+Links to the login account; unique so one account has at most
+one professor profile.
+
+department
+
+VARCHAR(100)
+
+NN
+
+Shows the administrator and students the professor's
+department.
+
+academic_title
+
+VARCHAR(60)
+
+NN
+
+Displays the rank beside the name so people address
+professors correctly.
+
+office_location
+
+VARCHAR(100)
+
+NULL
+
+Tells students where to find the professor for in-person
+follow-up.
+
+Thesis Defense Scheduling System | Complete Project Documentation (v2)
+
+Page 13
+
+4.3.4 Committee (new)
+A standing, named group of professors, defined by the administrator.
+Attribute
+
+Type
+
+Constraints
+
+Rationale
+
+committee_id
+
+INT
+
+PK
+
+Uniquely identifies the committee.
+
+name
+
+VARCHAR(100)
+
+UQ, NN
+
+Gives the name shown in the weekly grid cell, so it must be
+unique and recognizable.
+
+is_active
+
+BOOLEAN
+
+NN, default true
+
+Retires a committee without losing the history of defenses it
+handled.
+
+created_by_user_id
+
+INT
+
+FK, NN
+
+Records which administrator created the committee, for
+traceability.
+
+created_at
+
+DATETIME
+
+NN
+
+Records when the committee was created.
+
+4.3.5 CommitteeMember (new)
+Join entity between Committee and Professor.
+Attribute
+
+Type
+
+Constraints
+
+Rationale
+
+committee_member_i
+d
+
+INT
+
+PK
+
+Uniquely identifies one membership.
+
+committee_id
+
+INT
+
+FK, NN
+
+Identifies the committee the professor belongs to.
+
+professor_id
+
+INT
+
+FK, NN
+
+Identifies the member; the pair (committee_id, professor_id) is
+unique so nobody is added twice.
+
+4.3.6 AvailabilitySlot (changed)
+A time block published by exactly one owner, a professor or a committee. A single slot applies to one date; a
+recurring slot repeats by a pattern between two dates.
+Attribute
+
+Type
+
+Constraints
+
+Rationale
+
+slot_id
+
+INT
+
+PK
+
+Uniquely identifies each published time block.
+
+professor_id
+
+INT
+
+FK, NULL
+
+Names the owning professor when the slot belongs to one
+person.
+
+committee_id
+
+INT
+
+FK, NULL
+
+Names the owning committee when the slot belongs to a
+group; exactly one of professor_id and committee_id is filled
+(CHECK).
+
+created_by_user_id
+
+INT
+
+FK, NN
+
+Records who entered the slot, which matters for committee
+slots entered by one member.
+
+slot_type
+
+ENUM SlotType
+
+NN
+
+Marks the slot as single or recurring, which the grid shows in
+each cell.
+
+slot_date
+
+DATE
+
+NULL
+
+Holds the day of a single slot; empty for recurring slots; must
+fall on Saturday to Wednesday.
+
+recurrence_pattern
+
+ENUM Recurren
+cePattern
+
+NULL
+
+States how a recurring slot repeats: odd days, even days or
+weekly.
+
+weekday
+
+ENUM Weekday
+
+NULL
+
+Names the day of a weekly slot; empty for other patterns.
+
+start_time
+
+TIME
+
+NN
+
+Marks the start of the block; not earlier than 08:00.
+
+end_time
+
+TIME
+
+NN
+
+Marks the end of the block; not later than 17:00 and after
+start_time.
+
+valid_from
+
+DATE
+
+NULL
+
+First day on which a recurring slot applies.
+
+valid_until
+
+DATE
+
+NULL
+
+Last day on which a recurring slot applies, so recurrence has
+an end.
+
+status
+
+ENUM
+SlotStatus
+
+NN
+
+Shows whether the slot is available or withdrawn by its owner.
+
+created_at
+
+DATETIME
+
+NN
+
+Records when the slot was published.
+
+Thesis Defense Scheduling System | Complete Project Documentation (v2)
+
+Page 14
+
+4.3.7 DefenseSession (changed)
+One student's defense request. Assignment fields stay empty until the administrator acts.
+Attribute
+
+Type
+
+Constraints
+
+Rationale
+
+session_id
+
+INT
+
+PK
+
+Uniquely identifies each defense request.
+
+student_id
+
+INT
+
+FK, NN
+
+Identifies the student who requested the defense.
+
+slot_id
+
+INT
+
+FK, NULL
+
+Identifies the slot the administrator assigned; empty while the
+request is only submitted.
+
+scheduled_date
+
+DATE
+
+NULL
+
+Stores the concrete date of the defense, which the reminder
+job uses to find tomorrow's defenses.
+
+start_time
+
+TIME
+
+NULL
+
+Copies the slot start so later slot edits do not change a
+confirmed defense.
+
+end_time
+
+TIME
+
+NULL
+
+Copies the slot end for the same reason.
+
+status
+
+ENUM
+SessionStatus
+
+NN
+
+Tracks the request through requested, assigned, confirmed,
+rejected and cancelled.
+
+note
+
+TEXT
+
+NULL
+
+Lets the student add an optional message for the administrator
+and professors.
+
+created_at
+
+DATETIME
+
+NN
+
+Records when the student submitted the request.
+
+assigned_by_user_id
+
+INT
+
+FK, NULL
+
+Records which administrator assigned the request.
+
+assigned_at
+
+DATETIME
+
+NULL
+
+Records when the assignment was made.
+
+decision_reason
+
+TEXT
+
+NULL
+
+Holds the reason when the administrator declines a request,
+shown to the student.
+
+confirmed_at
+
+DATETIME
+
+NULL
+
+Records the moment all participants approved.
+
+cancelled_at
+
+DATETIME
+
+NULL
+
+Records when the session was cancelled.
+
+cancelled_by_user_id
+
+INT
+
+FK, NULL
+
+Records who cancelled, so others can be informed and the
+action traced.
+
+cancel_reason
+
+TEXT
+
+NULL
+
+Gives an optional explanation included in the notice to other
+parties.
+
+4.3.8 DefenseParticipant (changed)
+One professor's seat in one session, created when the administrator assigns the request.
+Attribute
+
+Type
+
+Constraints
+
+Rationale
+
+participant_id
+
+INT
+
+PK
+
+Uniquely identifies one seat in one session.
+
+session_id
+
+INT
+
+FK, NN
+
+Links the seat to its session.
+
+professor_id
+
+INT
+
+FK, NN
+
+Identifies the professor; (session_id, professor_id) is unique.
+
+status
+
+ENUM
+SeatStatus
+
+NN
+
+Records whether the professor's response is pending,
+approved or rejected.
+
+responded_at
+
+DATETIME
+
+NULL
+
+Records when the professor answered, keeping approval
+transparent.
+
+Thesis Defense Scheduling System | Complete Project Documentation (v2)
+
+Page 15
+
+4.3.9 Message
+The conversation of a confirmed session.
+Attribute
+
+Type
+
+Constraints
+
+Rationale
+
+message_id
+
+INT
+
+PK
+
+Uniquely identifies each message.
+
+session_id
+
+INT
+
+FK, NN
+
+Attaches the message to its defense, giving each session one
+thread.
+
+sender_user_id
+
+INT
+
+FK, NN
+
+Identifies the writer whatever the role.
+
+content
+
+TEXT
+
+NN
+
+Holds the message text.
+
+sent_at
+
+DATETIME
+
+NN
+
+Orders the thread chronologically.
+
+4.3.10 Notification (replaces ReminderEmail)
+Log of every Bale message the system sends.
+Attribute
+
+Type
+
+Constraints
+
+Rationale
+
+notification_id
+
+INT
+
+PK
+
+Uniquely identifies each notification.
+
+session_id
+
+INT
+
+FK, NN
+
+Identifies the defense the message is about.
+
+recipient_user_id
+
+INT
+
+FK, NN
+
+Identifies who receives it; the student and each professor are
+notified.
+
+type
+
+ENUM
+NotificationType
+
+NN
+
+Separates request outcomes from one-day reminders.
+
+scheduled_for
+
+DATETIME
+
+NN
+
+Stores the time the message should be sent; for reminders,
+one day before the defense.
+
+sent_at
+
+DATETIME
+
+NULL
+
+Records when Bale accepted the message, for auditing.
+
+status
+
+ENUM Notificatio
+nStatus
+
+NN
+
+Shows pending, sent, failed or skipped, so failures can be
+retried.
+
+failure_reason
+
+VARCHAR(200)
+
+NULL
+
+Keeps the error returned by Bale, for troubleshooting.
+
+Notification has a unique constraint on (session_id, recipient_user_id, type), so the daily job can never send the
+same person the same kind of message twice for one defense.
+
+4.4 Enumerations
+Enumeration
+
+Values
+
+Meaning
+
+Role
+
+student, professor,
+higher_education_staff, admin
+
+The user's role; professor and higher_education_staff have
+identical capabilities.
+
+DegreeLevel
+
+master, phd
+
+Level of the student's degree.
+
+SlotType
+
+single, recurring
+
+A single slot has one date; a recurring slot repeats by a pattern.
+
+RecurrencePattern
+
+odd_days, even_days, weekly
+
+Odd days are Saturday, Monday, Wednesday; even days are
+Sunday, Tuesday; weekly repeats on one weekday.
+
+Weekday
+
+sat, sun, mon, tue, wed
+
+The five working days shown on the grid.
+
+SlotStatus
+
+available, withdrawn
+
+Withdrawn slots stay on record but disappear from the grid.
+
+SessionStatus
+
+requested, assigned, confirmed,
+rejected, cancelled
+
+Requested: submitted, waiting for the administrator. Assigned: slot
+set, waiting for professors. Confirmed: all approved. Rejected: a
+professor rejected or the administrator declined. Cancelled:
+withdrawn after assignment.
+
+SeatStatus
+
+pending, approved, rejected
+
+One professor's answer.
+
+NotificationType
+
+outcome, reminder
+
+Outcome of the request, or the one-day-before reminder.
+
+NotificationStatus
+
+pending, sent, failed, skipped
+
+Skipped means the recipient has no linked Bale account.
+
+Thesis Defense Scheduling System | Complete Project Documentation (v2)
+
+Page 16
+
+4.5 Relationships and cardinalities
+#
+
+Relationship
+
+Cardinality
+
+Foreign key
+
+Status
+
+R1
+
+User - Student (has profile)
+
+1 : 0..1
+
+Student.user_id (UQ)
+
+Unchanged
+
+R2
+
+User - Professor (has profile)
+
+1 : 0..1
+
+Professor.user_id (UQ)
+
+Unchanged
+
+R3
+
+Professor - AvailabilitySlot (owns)
+
+1 : 0..N, optional on slot
+side
+
+AvailabilitySlot.professor_id
+
+Changed (now
+nullable)
+
+R4
+
+Committee - AvailabilitySlot (owns)
+
+1 : 0..N, optional on slot
+side
+
+AvailabilitySlot.committee_id
+
+New
+
+R5
+
+Committee - CommitteeMember (has)
+
+1 : 1..N
+
+CommitteeMember.committee_id
+
+New
+
+R6
+
+Professor - CommitteeMember
+(belongs through)
+
+1 : 0..N
+
+CommitteeMember.professor_id
+
+New
+
+R7
+
+Student - DefenseSession (requests)
+
+1 : 0..N
+
+DefenseSession.student_id
+
+Unchanged
+
+R8
+
+AvailabilitySlot - DefenseSession
+(assigned to)
+
+1 : 0..N, optional on
+session side
+
+DefenseSession.slot_id
+
+New
+
+R9
+
+User (admin) - DefenseSession
+(assigns)
+
+1 : 0..N, optional on
+session side
+
+DefenseSession.assigned_by_user_
+id
+
+New
+
+R10
+
+DefenseSession - DefenseParticipant
+(has)
+
+1 : 0..N
+
+DefenseParticipant.session_id
+
+Changed (was
+1..N)
+
+R11
+
+Professor - DefenseParticipant (sits on)
+
+1 : 0..N
+
+DefenseParticipant.professor_id
+
+Unchanged
+
+R12
+
+DefenseSession - Message (has)
+
+1 : 0..N
+
+Message.session_id
+
+Unchanged
+
+R13
+
+User - Message (sends)
+
+1 : 0..N
+
+Message.sender_user_id
+
+Unchanged
+
+R14
+
+DefenseSession - Notification (triggers)
+
+1 : 0..N
+
+Notification.session_id
+
+Renamed
+
+R15
+
+User - Notification (receives)
+
+1 : 0..N
+
+Notification.recipient_user_id
+
+Renamed
+
+R16
+
+User - DefenseSession (cancels)
+
+1 : 0..N, optional on
+session side
+
+DefenseSession.cancelled_by_user
+_id
+
+Unchanged
+
+R17
+
+User (admin) - Committee (creates)
+
+1 : 0..N
+
+Committee.created_by_user_id
+
+New
+
+4.5.1 Explanation of each relationship
+R1 and R2, User with Student and Professor. An account has no profile or exactly one of each kind, and every
+profile belongs to exactly one account. The minimum of zero exists because administrators have neither profile,
+and because a student has no professor profile and the reverse. A student and a professor profile never exist for
+the same account.
+R3 and R4, owners of slots. A professor or a committee may have published no slots or many, and every slot has
+exactly one owner. Because the owner is either a professor or a committee, both foreign keys are nullable and a
+CHECK constraint requires exactly one to be filled. This keeps one slot table while letting the grid show either
+name.
+R5 and R6, committee membership. A committee has at least one member and many are normal; a professor
+may belong to no committee or several. The two relationships together resolve the many-to-many link between
+Professor and Committee through CommitteeMember, whose pair (committee_id, professor_id) is unique.
+R7, Student requests DefenseSession. A student has none before the first request and may have several over
+time, for example after a rejection or cancellation. Every session belongs to exactly one student. At most one
+session per student may be active (requested, assigned or confirmed) at a time.
+R8, slot assigned to sessions. Over time a slot can serve many sessions: a recurring slot repeats, and even a
+single slot can be reused after a cancellation. A session has a slot only after assignment, so the foreign key is
+nullable. The concrete date is stored on the session, and (slot_id, scheduled_date) must be unique among active
+sessions, which prevents double booking of the same occurrence.
+
+Thesis Defense Scheduling System | Complete Project Documentation (v2)
+
+Page 17
+
+R9, administrator assigns. An administrator may have assigned none or many sessions; a session has at most
+one assigning administrator, and none while it is only requested.
+R10 and R11, participants. Seats are created at assignment, so a session has no participants before that and
+one or more afterwards (one for a professor's slot, one per member for a committee's slot). Every seat belongs to
+one session and one professor. Together they resolve the many-to-many link between sessions and professors.
+R12 and R13, messages. A session has no messages until it is confirmed and any number afterwards; each
+message belongs to one session and has one sender. The sender reference points to User so one key serves all
+roles.
+R14 and R15, notifications. A session produces an outcome notification for the student and for each professor,
+and one reminder each the day before. Each notification concerns one session and has one recipient.
+R16 and R17, cancellation and committee creation. A user may have cancelled many sessions, but a session
+has at most one canceller. An administrator may have created many committees; every committee records its
+creator.
+
+4.6 Business rules and constraints
+Rule
+
+Description
+
+Enforced by
+
+Slot owner
+
+A slot belongs to exactly one professor or one committee.
+
+CHECK on AvailabilitySlot
+
+Slot shape
+
+Single slots have slot_date and no pattern; recurring slots have a
+pattern, valid_from and valid_until; weekly slots also have a weekday.
+
+CHECK on AvailabilitySlot
+
+Grid window
+
+Dates and weekdays fall on Saturday to Wednesday; times lie
+between 08:00 and 17:00 and end after they start.
+
+CHECK and application validation
+
+Odd/even expansion
+
+Odd days expand to Sat, Mon, Wed; even days to Sun, Tue; weekly to Schedule generator (process 3.0)
+its weekday.
+
+No double booking
+
+An occurrence (slot, date) can belong to only one active session.
+
+Partial unique index on
+DefenseSession (slot_id,
+scheduled_date) where status is
+assigned or confirmed
+
+No professor overlap
+
+A professor cannot hold two seats whose dates and times overlap in
+active sessions.
+
+Check at assignment (process 5.0)
+
+One active request
+
+A student can have only one session that is requested, assigned or
+confirmed.
+
+Application rule at submission
+
+Assignment
+
+Only an administrator can assign or decline a request; assignment
+creates the seats and sets status to assigned.
+
+Role check in process 5.0
+
+Confirmation
+
+A session is confirmed only when every seat is approved; one
+rejection sets it to rejected.
+
+Process 6.0
+
+Cancellation
+
+The student or an assigned professor can cancel an assigned or
+confirmed session; the date becomes free again.
+
+Process 7.0
+
+Messaging
+
+Messages are accepted only in confirmed sessions and only from the
+student and assigned professors.
+
+Process 8.0
+
+Bale linking
+
+bale_chat_id is unique; a link code is valid for a limited time and works Process 1.0
+once.
+
+Notification uniqueness
+
+One notification per session, recipient and type.
+
+Thesis Defense Scheduling System | Complete Project Documentation (v2)
+
+Unique constraint on Notification
+
+Page 18
+
+4.7 Weekly schedule grid (derived, not stored)
+The grid is generated for a chosen week from AvailabilitySlot, Committee and Professor/User data. Columns are
+the five days Saturday to Wednesday; rows are the working hours from 8:00 to 17:00. Each cell lists the owner
+name (professor full name or committee name) and the label "Single" or "Recurring". A recurring slot appears in
+every matching day column. Withdrawn slots do not appear. The table shows the structure with illustrative values.
+Table: structure of the weekly grid (illustrative content only)
+Time
+
+Saturday
+
+Sunday
+
+Monday
+
+Tuesday
+
+Wednesday
+
+08:00-10:00
+
+Dr. A (Recurring,
+odd)
+
+Committee X
+(Recurring, even)
+
+Dr. A (Recurring,
+odd)
+
+Committee X
+(Recurring, even)
+
+Dr. A (Recurring, odd)
+
+10:00-12:00
+
+Dr. B (Single)
+
+12:00-14:00
+14:00-17:00
+
+Committee Y (Single)
+
+Dr. C (Recurring,
+weekly)
+
+The same grid is exported as a PDF with the same layout. Students, professors and the administrator can view and
+download it; only the owners can change slots, and students cannot select anything on it.
+
+4.8 Change log from ERD version 1
+Item
+
+Version 1
+
+Version 2
+
+Entities
+
+8
+
+10 (Committee, CommitteeMember added; ReminderEmail
+replaced by Notification)
+
+Slot ownership
+
+Professor only
+
+Professor or committee
+
+Slot timing
+
+One date, start and end
+
+Single or recurring (odd days, even days, weekly) with
+validity range
+
+Slot status
+
+available, reserved, withdrawn
+
+available, withdrawn (occupancy moved to the session
+date)
+
+Session statuses
+
+pending, confirmed, rejected, cancelled
+
+requested, assigned, confirmed, rejected, cancelled
+
+Session slot link
+
+Through DefenseParticipant.slot_id
+
+Directly on DefenseSession.slot_id with a concrete date
+
+Committee choice
+
+Student selects professors
+
+Administrator assigns slot and professor or committee
+
+Notification channel
+
+Email (ReminderEmail, User.email required)
+
+Bale bot (Notification, User.bale_*; email optional)
+
+Thesis Defense Scheduling System | Complete Project Documentation (v2)
+
+Page 19
+
+5. Data Flow Design
+5.1 Conventions
+The design uses Gane-Sarson notation described in words. External entities are people or systems outside the
+boundary and are numbered E1 to E4. Processes are numbered 1.0 to 9.0 and named with a verb. Data stores
+are numbered D1 to D7 and correspond to ERD entities. Data flows carry named data between these elements. A
+process never exchanges data directly with another process in this design; related processes communicate
+through data stores. Level 0 shows the whole system as one process; Level 1 breaks it into nine processes.
+
+5.2 External entities
+ID
+
+External entity
+
+Role and reason for being outside the system
+
+E1
+
+Student
+
+Submits requests, cancels, messages and views the schedule; a person who exchanges
+data with the system across its boundary.
+
+E2
+
+Professor / Higher Education staff
+
+Defines slots, answers assigned defenses, cancels and messages; staff share this entity
+because they have the same capabilities.
+
+E3
+
+Administrator
+
+Creates accounts and committees, assigns requests and views the schedule.
+
+E4
+
+Bale Messenger Platform
+
+External system that delivers bot messages and reports delivery status and account-link
+events; replaces the Email Service of version 1.
+
+The daily timer is part of the system. It is shown as the trigger of process 9.0, not as an external entity.
+
+5.3 Level 0 (context) diagram
+The context level shows the Thesis Defense Scheduling System as a single process, 0 "Thesis Defense
+Scheduling System", with four external entities. It answers one question: what crosses the boundary of the
+system?
+#
+
+From
+
+To
+
+Data flow
+
+Description
+
+1
+
+E1 Student
+
+System
+
+Credentials, Bale link code
+
+Login data and the one-time code used to link a Bale
+account.
+
+2
+
+E1 Student
+
+System
+
+Schedule request
+
+Request to view or download the weekly schedule.
+
+3
+
+E1 Student
+
+System
+
+Defense request
+
+Optional note with the request; thesis details come from
+the profile.
+
+4
+
+E1 Student
+
+System
+
+Cancel request, reason
+
+Request to cancel with an optional reason.
+
+5
+
+E1 Student
+
+System
+
+Message
+
+Text written to the committee.
+
+6
+
+System
+
+E1 Student
+
+Login result
+
+Access result and role.
+
+7
+
+System
+
+E1 Student
+
+Weekly schedule (grid, PDF)
+
+The grid shown on screen or the downloadable PDF.
+
+8
+
+System
+
+E1 Student
+
+Request receipt and status
+
+Confirmation of submission and the current status of the
+request.
+
+9
+
+System
+
+E1 Student
+
+Cancel notice, message thread
+
+News of a cancellation and the conversation.
+
+10
+
+E2 Professor
+
+System
+
+Credentials, Bale link code
+
+Login data and Bale link code.
+
+11
+
+E2 Professor
+
+System
+
+Slot definitions, withdrawal
+
+Single or recurring slots for self or committee, and
+withdrawal of slots.
+
+12
+
+E2 Professor
+
+System
+
+Approve / reject decision
+
+Answer to an assigned defense.
+
+13
+
+E2 Professor
+
+System
+
+Cancel request, message,
+schedule request
+
+Cancellation, messages and schedule requests.
+
+14
+
+System
+
+E2 Professor
+
+Login result, slot list, weekly
+schedule
+
+Access result, own slots and the grid.
+
+Thesis Defense Scheduling System | Complete Project Documentation (v2)
+
+Page 20
+
+#
+
+From
+
+To
+
+Data flow
+
+Description
+
+15
+
+System
+
+E2 Professor
+
+Assigned requests, session status,
+cancel notice, message thread
+
+Defenses awaiting an answer, session results,
+cancellations and the conversation.
+
+16
+
+E3
+Administrator
+
+System
+
+Credentials, account details,
+deactivation
+
+Login data and account maintenance.
+
+17
+
+E3
+Administrator
+
+System
+
+Committee definitions
+
+Committee names and members.
+
+18
+
+E3
+Administrator
+
+System
+
+Assignment decision, decline
+reason
+
+Chosen slot, date and professor or committee, or a
+decline.
+
+19
+
+System
+
+E3
+Administrator
+
+Login result, account status,
+pending requests, weekly schedule
+
+Results and the list of requests waiting for assignment.
+
+20
+
+System
+
+E4 Bale
+Platform
+
+Bale notification (chat id, text)
+
+Outcome and reminder messages to be delivered.
+
+21
+
+E4 Bale
+Platform
+
+System
+
+Delivery status, link event
+
+Sent or failed result, and the event when a user sends
+the link code to the bot.
+
+5.4 Level 1 processes
+Process
+
+Name
+
+Purpose
+
+Triggered by
+
+1.0
+
+Authenticate and manage
+accounts
+
+Single entry point for all roles; lets the administrator create or
+deactivate accounts; links Bale accounts.
+
+Any user, administrator
+action, Bale link event
+
+2.0
+
+Manage committees and
+availability slots
+
+Administrator defines committees; professors define and
+withdraw single and recurring slots for themselves or their
+committees.
+
+Administrator, professor
+
+3.0
+
+Provide weekly schedule
+
+Builds the Saturday to Wednesday, 8:00 to 17:00 grid from
+the slots and returns it on screen or as PDF.
+
+Student, professor,
+administrator
+
+4.0
+
+Submit defense request
+
+Creates a request with status requested; the student chooses
+no professor.
+
+Student
+
+5.0
+
+Assign defense request
+
+Administrator assigns a slot, date and professor or committee, Administrator
+or declines the request.
+
+6.0
+
+Process committee responses
+
+Records each professor's decision; confirms when all
+approve; rejects on any rejection.
+
+7.0
+
+Cancel defense
+
+Cancels an assigned or confirmed session and frees the date. Student, professor
+
+8.0
+
+Exchange messages
+
+Accepts and returns messages of confirmed sessions.
+
+Student, professor
+
+9.0
+
+Send Bale notifications
+
+Sends outcome messages and daily one-day reminders
+through Bale and records delivery.
+
+Pending outcome records,
+daily timer
+
+Professor
+
+5.5 Data stores
+ID
+
+Data store
+
+ERD entities
+
+Content and reason
+
+D1
+
+Users
+
+User, Student, Professor
+
+Accounts, profiles and Bale link data used by login, scheduling
+and notification.
+
+D2
+
+Committees
+
+Committee, CommitteeMember
+
+Committees and their members; supplies names for the grid and
+seats for assignment.
+
+D3
+
+Availability slots
+
+AvailabilitySlot
+
+Single and recurring slots; the source of the weekly grid.
+
+D4
+
+Defense sessions
+
+DefenseSession
+
+Every request with its status, assignment and cancellation data.
+
+D5
+
+Defense participants
+
+DefenseParticipant
+
+Each professor's seat and answer in a session.
+
+D6
+
+Messages
+
+Message
+
+Conversation threads of confirmed sessions.
+
+D7
+
+Notification log
+
+Notification
+
+Every Bale message with status, used for retries and duplicate
+prevention.
+
+Thesis Defense Scheduling System | Complete Project Documentation (v2)
+
+Page 21
+
+5.6 Level 1 data flows by process
+Process 1.0 Authenticate and manage accounts
+Verifies credentials, returns the role, lets the administrator create or deactivate accounts, and links Bale accounts.
+From
+
+To
+
+Data flow
+
+Description
+
+E1, E2, E3
+
+1.0
+
+Credentials
+
+Username and password.
+
+1.0
+
+E1, E2, E3
+
+Login result, role
+
+Success or refusal and the role that selects the
+interface.
+
+E3 Administrator
+
+1.0
+
+Account details, deactivation
+request
+
+New account data or a request to deactivate.
+
+1.0
+
+E3 Administrator
+
+Account status
+
+Result of the account action.
+
+E1, E2
+
+1.0
+
+Bale link request
+
+Request for a one-time link code.
+
+1.0
+
+E1, E2
+
+Bale link code
+
+The code to send to the bot.
+
+E4 Bale Platform
+
+1.0
+
+Link event (code, chat id)
+
+The user sent the code to the bot.
+
+1.0
+
+D1 Users
+
+Account record, bale_chat_id
+(read and write)
+
+Reads accounts to verify; writes new, deactivated and
+linked accounts.
+
+Process 2.0 Manage committees and availability slots
+Administrators define committees; professors publish and withdraw single or recurring slots for themselves or for a
+committee of which they are a member.
+From
+
+To
+
+Data flow
+
+Description
+
+E3 Administrator
+
+2.0
+
+Committee definition
+
+Name and member list.
+
+2.0
+
+E3 Administrator
+
+Committee confirmation
+
+Result of saving.
+
+E2 Professor
+
+2.0
+
+Slot definition, withdrawal
+request
+
+Owner, type, date or pattern, times, validity range.
+
+2.0
+
+E2 Professor
+
+Slot list, confirmation
+
+Own slots and the result of the change.
+
+D1 Users
+
+2.0
+
+Professor profiles
+
+Used to choose committee members and check
+ownership.
+
+2.0
+
+D2 Committees
+
+Committee, members (write)
+
+Stores committees.
+
+D2 Committees
+
+2.0
+
+Committee membership (read)
+
+Checks that a professor belongs to a committee before
+accepting its slot.
+
+2.0
+
+D3 Availability slots
+
+Slots (read and write)
+
+Reads for overlap checks; writes new or withdrawn
+slots.
+
+Process 3.0 Provide weekly schedule
+Expands single and recurring slots into the week and returns the grid, optionally as PDF.
+From
+
+To
+
+Data flow
+
+Description
+
+E1, E2, E3
+
+3.0
+
+Schedule request (week, view or
+download)
+
+Which week and which format.
+
+3.0
+
+E1, E2, E3
+
+Weekly schedule (grid, PDF)
+
+Each cell shows owner name and Single or Recurring.
+
+D3 Availability slots
+
+3.0
+
+Available slots
+
+Source of the grid; withdrawn slots are ignored.
+
+D2 Committees
+
+3.0
+
+Committee names
+
+Names for committee slots.
+
+D1 Users
+
+3.0
+
+Professor names
+
+Names for professor slots.
+
+Thesis Defense Scheduling System | Complete Project Documentation (v2)
+
+Page 22
+
+Process 4.0 Submit defense request
+Creates a request without any choice of professor.
+From
+
+To
+
+Data flow
+
+Description
+
+E1 Student
+
+4.0
+
+Defense request (note)
+
+The optional note; the thesis details come from the
+profile.
+
+4.0
+
+E1 Student
+
+Request receipt
+
+Confirms the request was saved.
+
+D1 Users
+
+4.0
+
+Student profile
+
+Supplies degree level and thesis title.
+
+D4 Defense sessions
+
+4.0
+
+Active session check
+
+Ensures the student has no other active request.
+
+4.0
+
+D4 Defense sessions
+
+New session (status requested)
+
+Creates the request.
+
+4.0
+
+E3 Administrator
+
+New request notice (in-app)
+
+Tells the administrator that a request is waiting.
+
+Process 5.0 Assign defense request
+The administrator, using organizational logic, chooses a slot and date and thereby the professor or committee, or
+declines.
+From
+
+To
+
+Data flow
+
+Description
+
+E3 Administrator
+
+5.0
+
+Assignment decision (slot, date),
+or decline reason
+
+The choice made by the administrator.
+
+5.0
+
+E3 Administrator
+
+Pending requests, assignment
+result
+
+Requests waiting and the outcome of the action.
+
+D4 Defense sessions
+
+5.0
+
+Requested sessions
+
+Requests to handle; also used for the double-booking
+check.
+
+D3 Availability slots
+
+5.0
+
+Slot details
+
+Validates the chosen slot and date.
+
+D2 Committees
+
+5.0
+
+Committee members
+
+Gives the seats for a committee slot.
+
+D1 Users
+
+5.0
+
+Professor profiles
+
+Gives names and checks professor overlap.
+
+5.0
+
+D4 Defense sessions
+
+Assignment (slot, date, status
+assigned) or decline (status
+rejected)
+
+Updates the session.
+
+5.0
+
+D5 Defense
+participants
+
+Seats (pending)
+
+Creates one seat per assigned professor.
+
+5.0
+
+D7 Notification log
+
+Outcome record (on decline)
+
+Prepares the Bale message for the student.
+
+5.0
+
+E2 Professor
+
+Assigned request notice (in-app)
+
+Tells each professor that an answer is needed.
+
+Process 6.0 Process committee responses
+Records each professor's answer and decides the session result.
+From
+
+To
+
+Data flow
+
+Description
+
+E2 Professor
+
+6.0
+
+Approve / reject decision
+
+Answer to one assigned defense.
+
+6.0
+
+E2 Professor
+
+Assigned requests, session
+result
+
+Defenses waiting and the final result.
+
+D5 Defense
+participants
+
+6.0
+
+Pending seats
+
+Seats to answer.
+
+6.0
+
+D5 Defense
+participants
+
+Seat decision (read and write)
+
+Stores the answer and time.
+
+D4 Defense sessions
+
+6.0
+
+Session status
+
+Current state.
+
+6.0
+
+D4 Defense sessions
+
+Confirmed or rejected status
+
+Confirmed when all approved; rejected on any
+rejection.
+
+6.0
+
+D7 Notification log
+
+Outcome records
+
+One per participant and the student.
+
+6.0
+
+E1 Student
+
+Request status (in-app)
+
+Shows the result in the application.
+
+Thesis Defense Scheduling System | Complete Project Documentation (v2)
+
+Page 23
+
+Process 7.0 Cancel defense
+Cancels an assigned or confirmed session and informs the other parties.
+From
+
+To
+
+Data flow
+
+Description
+
+E1, E2
+
+7.0
+
+Cancel request, reason
+
+Request to cancel.
+
+7.0
+
+E1, E2
+
+Cancel notice
+
+Tells the other parties who cancelled (in-app).
+
+D4 Defense sessions
+
+7.0
+
+Session status
+
+Checks that the session is assigned or confirmed.
+
+7.0
+
+D4 Defense sessions
+
+Cancelled status, canceller,
+time, reason
+
+Records the cancellation; the date becomes free.
+
+Process 8.0 Exchange messages
+Accepts messages only for confirmed sessions and only from members.
+From
+
+To
+
+Data flow
+
+Description
+
+E1, E2
+
+8.0
+
+Message
+
+Text written by a participant.
+
+8.0
+
+E1, E2
+
+Message thread
+
+Conversation shown to participants.
+
+D4 Defense sessions
+
+8.0
+
+Session status
+
+Confirms the session is confirmed.
+
+D5 Defense
+participants
+
+8.0
+
+Membership
+
+Confirms the sender belongs to the session.
+
+8.0
+
+D6 Messages
+
+Messages (read and write)
+
+Stores and reads the thread.
+
+Process 9.0 Send Bale notifications
+Runs when outcome records are pending and every day for reminders; sends through Bale and records the result.
+From
+
+To
+
+Data flow
+
+Description
+
+Daily timer
+
+9.0
+
+Start signal
+
+Starts the reminder run.
+
+D4 Defense sessions
+
+9.0
+
+Confirmed sessions due
+tomorrow
+
+Sessions whose date is the next day.
+
+D5 Defense
+participants
+
+9.0
+
+Participants
+
+Professors on those sessions.
+
+D1 Users
+
+9.0
+
+bale_chat_id
+
+Chat addresses of the student and professors.
+
+D7 Notification log
+
+9.0
+
+Pending and existing records
+
+Pending outcomes and the check that avoids
+duplicates.
+
+9.0
+
+E4 Bale Platform
+
+Bale notification (chat id, text)
+
+Message to deliver.
+
+E4 Bale Platform
+
+9.0
+
+Delivery status
+
+Sent or failed result.
+
+9.0
+
+D7 Notification log
+
+Status sent, failed or skipped
+
+Skipped when the user has no linked Bale account.
+
+Thesis Defense Scheduling System | Complete Project Documentation (v2)
+
+Page 24
+
+5.7 Process and data store matrix (C create, R read, U update)
+D2
+Committees
+
+D3 Slots
+
+R
+
+CRU
+
+CRU
+
+3.0 Provide weekly schedule
+
+R
+
+R
+
+R
+
+4.0 Submit defense request
+
+R
+
+5.0 Assign defense request
+
+R
+
+Process
+
+D1 Users
+
+1.0 Authenticate and manage
+accounts
+
+CRU
+
+2.0 Manage committees and slots
+
+D4
+Sessions
+
+D5
+Participants
+
+D6
+Messages
+
+D7
+Notifications
+
+CR
+RU
+
+C
+
+C
+
+6.0 Process committee responses
+
+RU
+
+RU
+
+C
+
+7.0 Cancel defense
+
+RU
+
+8.0 Exchange messages
+
+R
+
+R
+
+R
+
+R
+
+9.0 Send Bale notifications
+
+R
+
+R
+
+R
+
+CR
+CRU
+
+5.8 Data flow rules
+Rule
+
+Description
+
+No student choice
+
+Process 4.0 accepts no professor or committee from the student; only 5.0 links a request to a slot.
+
+Assignment authority
+
+Only the administrator can reach process 5.0; the role returned by 1.0 controls access.
+
+Confirmation
+
+Process 6.0 confirms only when every seat is approved; one rejection rejects the session.
+
+Free dates
+
+Cancellation or rejection frees the occurrence automatically because occupancy is derived from active
+sessions.
+
+Messaging
+
+Process 8.0 accepts messages only for confirmed sessions and only from members.
+
+Notifications
+
+Only the request outcome and the one-day reminder use Bale; all other notices stay in the application.
+
+No duplicates
+
+Process 9.0 checks D7 so no recipient receives the same type of message twice for one session.
+
+Missing Bale link
+
+A recipient without bale_chat_id gets status skipped and still sees every status in the application.
+
+Grid is derived
+
+Process 3.0 reads slots each time and stores nothing, so the grid is always current.
+
+5.9 Change log from DFD version 1
+Item
+
+Version 1
+
+Version 2
+
+External entity E4
+
+Email Service
+
+Bale Messenger Platform (also sends link events)
+
+Processes
+
+7
+
+9 (new: 3.0 Provide weekly schedule, 5.0 Assign defense
+request; 2.0 widened to committees)
+
+Request process
+
+Selects committee and computes common
+free times
+
+Submits a request without choosing a professor
+
+Reminder process
+
+7.0 Send reminders by email
+
+9.0 Send Bale notifications (outcomes and reminders)
+
+Data stores
+
+6
+
+7 (new: D2 Committees; Reminder log became Notification
+log)
+
+Administrator
+
+Account management only
+
+Also committees, assignment and schedule viewing
+
+Numbering
+
+1.0 to 7.0
+
+1.0 to 9.0; cancellation is 7.0 and messages 8.0
+
+Thesis Defense Scheduling System | Complete Project Documentation (v2)
+
+Page 25
+
+6. Swimlane Design
+6.1 Purpose and conventions
+The swimlane (cross-functional) design describes who does what, in which order, across the whole defense
+process. Each lane is one actor or system. A step belongs to exactly one lane. Steps are numbered by phase (for
+example 5.3 is the third step of phase 5), and each phase maps to one DFD process, so the two views can be
+checked against each other. Step types are: Start, Task, Decision (a question with branches), End (a final state)
+and Optional (a step that may be skipped).
+
+6.2 Lanes
+Lane
+
+Who or what
+
+Responsibility
+
+Student
+
+Master's or PhD student
+
+Views the schedule, submits a request, follows its status,
+messages, cancels, links Bale.
+
+Professor / staff
+
+Committee member or Higher Education
+staff; one lane for all professors because
+they act in parallel in the same way
+
+Defines slots, views the schedule, answers assigned defenses,
+messages, cancels, links Bale.
+
+Administrator
+
+Account and scheduling manager
+
+Manages accounts and committees, reviews requests, assigns
+or declines them. In version 2 this is a full workflow lane.
+
+System
+
+Web and Android applications plus the
+shared back-end, including the daily timer
+
+Validates, computes, records, notifies and runs scheduled jobs.
+
+Bale Platform
+
+External messenger service hosting the bot
+
+Delivers bot messages, reports delivery status and relays link
+events; replaces the Email Service lane of version 1.
+
+6.3 Phases overview
+Phase
+
+Name
+
+DFD
+process
+
+Lanes involved
+
+Result
+
+1
+
+Access: login, accounts and Bale
+link
+
+1.0
+
+Administrator, Student/Professor,
+System, Bale
+
+A verified user with a role,
+optionally linked to Bale
+
+2
+
+Availability: committees and slots
+
+2.0
+
+Administrator, Professor, System
+
+Single or recurring slots
+published
+
+3
+
+Weekly schedule
+
+3.0
+
+Student, Professor, Administrator,
+System
+
+Grid viewed or PDF downloaded
+
+4
+
+Request submission
+
+4.0
+
+Student, System, Administrator
+
+Request in status requested
+
+5
+
+Assignment
+
+5.0
+
+Administrator, System, Professor
+
+Request assigned or declined
+
+6
+
+Committee response
+
+6.0
+
+Professor, System, Student
+
+Session confirmed or rejected
+
+7
+
+Cancellation
+
+7.0
+
+Student, Professor, System
+
+Session cancelled, others
+informed
+
+8
+
+Messaging
+
+8.0
+
+Student, Professor, System
+
+Message saved and thread
+readable
+
+9
+
+Bale notifications
+
+9.0
+
+System, Bale Platform
+
+Outcome and reminders
+delivered and logged
+
+Thesis Defense Scheduling System | Complete Project Documentation (v2)
+
+Page 26
+
+6.4 Phase 1: Access (DFD 1.0)
+Every scenario starts with a login. The same login serves all roles. The optional Bale linking sub-flow lets a user
+receive notifications.
+Step
+
+Lane
+
+Activity
+
+Type
+
+Next / branches
+
+1.0
+
+Administrator
+
+Needs an account: decides to create or deactivate an
+account
+
+Start
+
+1.1
+
+1.1
+
+Administrator
+
+Enters account details or a deactivation request
+
+Task
+
+1.2
+
+1.2
+
+System
+
+Validates and saves the account change; returns the
+status
+
+Task
+
+End 1.A
+
+1.3
+
+Student /
+Professor
+
+Opens the app and enters username and password
+
+Start
+
+1.4
+
+1.4
+
+System
+
+Verifies credentials against stored accounts and finds the
+role
+
+Task
+
+1.5
+
+1.5
+
+System
+
+Valid credentials and active account?
+
+Decision
+
+Yes: 1.6. No: End 1.R
+
+1.6
+
+System
+
+Shows the interface for the role
+
+Task
+
+End 1.B
+
+1.7
+
+Student /
+Professor
+
+Requests a Bale link code from the profile page
+
+Optional
+
+1.8
+
+1.8
+
+System
+
+Generates a one-time code with an expiry and shows it
+
+Task
+
+1.9
+
+1.9
+
+Student /
+Professor
+
+Sends the code to the Bale bot
+
+Task
+
+1.10
+
+1.10
+
+Bale Platform
+
+Relays the link event (code and chat id) to the system
+
+Task
+
+1.11
+
+1.11
+
+System
+
+Code valid and unexpired?
+
+Decision
+
+Yes: 1.12. No: End 1.C
+
+1.12
+
+System
+
+Saves bale_chat_id and the link time; clears the code;
+confirms in the app
+
+Task
+
+End 1.D
+
+End
+
+Lane
+
+Meaning
+
+1.A
+
+System
+
+Account created or deactivated.
+
+1.R
+
+System
+
+Login refused: wrong credentials or deactivated account.
+
+1.B
+
+Student / Professor
+
+Logged in and sees the role interface.
+
+1.C
+
+System
+
+Link refused: the code is wrong or expired; the user may request a new one.
+
+1.D
+
+System
+
+Bale account linked.
+
+6.5 Phase 2: Availability (DFD 2.0)
+Administrators define committees. Professors publish slots for themselves or a committee they belong to, as single
+or recurring slots.
+Step
+
+Lane
+
+Activity
+
+Type
+
+Next / branches
+
+2.1
+
+Administrator
+
+Defines a committee: name and member professors
+
+Optional
+
+2.2
+
+2.2
+
+System
+
+Validates the name is unique and members exist; saves
+the committee
+
+Task
+
+2.3
+
+2.3
+
+Professor
+
+Starts a slot: chooses owner (self or committee), type
+single or recurring
+
+Start
+
+2.4
+
+2.4
+
+Professor
+
+Enters date or pattern (odd days, even days, weekly with
+weekday), start and end time, and validity range for
+recurring slots
+
+Task
+
+2.5
+
+2.5
+
+System
+
+Slot valid? Inside Saturday to Wednesday and 08:00 to
+17:00, end after start, no overlap with the owner's other
+slots, and the professor belongs to the chosen committee
+
+Decision
+
+Yes: 2.6. No: End 2.R
+
+2.6
+
+System
+
+Saves the slot as available and makes it visible on the
+grid
+
+Task
+
+2.7
+
+Thesis Defense Scheduling System | Complete Project Documentation (v2)
+
+Page 27
+
+Step
+
+Lane
+
+Activity
+
+Type
+
+Next / branches
+
+2.7
+
+Professor
+
+Withdraws a slot
+
+Optional
+
+2.8
+
+2.8
+
+System
+
+Marks the slot as withdrawn; it disappears from the grid
+but stays on record
+
+Task
+
+End 2.A
+
+End
+
+Lane
+
+Meaning
+
+2.R
+
+System
+
+Slot refused with the reason shown to the professor.
+
+2.A
+
+System
+
+Slot published or withdrawn.
+
+6.6 Phase 3: Weekly schedule (DFD 3.0)
+A read-only phase available to students, professors and the administrator. Students cannot select anything on the
+grid.
+Step
+
+Lane
+
+Activity
+
+Type
+
+Next / branches
+
+3.1
+
+Student /
+Professor /
+Administrator
+
+Opens the schedule page and chooses a week
+
+Start
+
+3.2
+
+3.2
+
+System
+
+Reads available slots, professor and committee names
+
+Task
+
+3.3
+
+3.3
+
+System
+
+Expands recurring slots into dates (odd days: Sat, Mon,
+Wed; even days: Sun, Tue; weekly: its weekday) and
+places them in the grid
+
+Task
+
+3.4
+
+3.4
+
+System
+
+Shows the grid with owner name and Single or Recurring
+in each cell
+
+Task
+
+3.5
+
+3.5
+
+Student /
+Professor /
+Administrator
+
+Downloads the schedule as PDF
+
+Optional
+
+3.6
+
+3.6
+
+System
+
+Generates the PDF with the same layout
+
+Task
+
+End 3.A
+
+End
+
+Lane
+
+Meaning
+
+3.A
+
+System
+
+Schedule viewed or downloaded.
+
+6.7 Phase 4: Request submission (DFD 4.0)
+The student only submits a request. No professor or committee is chosen.
+Step
+
+Lane
+
+Activity
+
+Type
+
+Next / branches
+
+4.1
+
+Student
+
+Opens the request form; thesis title and degree level
+come from the profile
+
+Start
+
+4.2
+
+4.2
+
+Student
+
+Adds an optional note and submits
+
+Task
+
+4.3
+
+4.3
+
+System
+
+Does the student already have a requested, assigned or
+confirmed session?
+
+Decision
+
+No: 4.4. Yes: End 4.R
+
+4.4
+
+System
+
+Creates the session with status requested
+
+Task
+
+4.5
+
+4.5
+
+System
+
+Sends an in-app notice to the administrator and a receipt
+to the student
+
+Task
+
+End 4.A
+
+End
+
+Lane
+
+Meaning
+
+4.R
+
+System
+
+Request refused because another request is active.
+
+4.A
+
+Student
+
+Request submitted; the receipt is shown and the status reads requested.
+
+Thesis Defense Scheduling System | Complete Project Documentation (v2)
+
+Page 28
+
+6.8 Phase 5: Assignment (DFD 5.0)
+The administrator decides, using organizational logic, which slot and therefore which professor or committee
+handles the request.
+Step
+
+Lane
+
+Activity
+
+Type
+
+Next / branches
+
+5.1
+
+Administrator
+
+Opens the list of requested sessions
+
+Start
+
+5.2
+
+5.2
+
+Administrator
+
+Reviews the request, the weekly schedule and workloads
+
+Task
+
+5.3
+
+5.3
+
+Administrator
+
+Assign or decline?
+
+Decision
+
+Assign: 5.4. Decline: 5.9
+
+5.4
+
+Administrator
+
+Chooses a slot and a concrete date
+
+Task
+
+5.5
+
+5.5
+
+System
+
+Occurrence (slot, date) free, and no overlap for the
+professors concerned?
+
+Decision
+
+Yes: 5.6. No: End 5.R
+
+5.6
+
+System
+
+Sets the session to assigned with slot, date, times,
+assigning admin and time
+
+Task
+
+5.7
+
+5.7
+
+System
+
+Creates one seat per professor (one for a professor slot,
+one per member for a committee slot), status pending
+
+Task
+
+5.8
+
+5.8
+
+System
+
+Sends an in-app notice to each assigned professor
+
+Task
+
+End 5.A
+
+5.9
+
+Administrator
+
+Enters the decline reason
+
+Task
+
+5.10
+
+5.10
+
+System
+
+Sets the session to rejected and queues an outcome
+notification for the student (phase 9)
+
+Task
+
+End 5.B
+
+End
+
+Lane
+
+Meaning
+
+5.R
+
+System
+
+Assignment refused: the date is taken or a professor overlaps; the administrator chooses
+again.
+
+5.A
+
+Professor / staff
+
+Assigned professors know an answer is needed.
+
+5.B
+
+Student
+
+Request declined; the reason is visible and a Bale outcome message follows.
+
+6.9 Phase 6: Committee response (DFD 6.0)
+Each assigned professor answers independently. The session result follows from all answers.
+Step
+
+Lane
+
+Activity
+
+Type
+
+Next / branches
+
+6.1
+
+Professor / staff
+
+Opens the assigned requests
+
+Start
+
+6.2
+
+6.2
+
+Professor / staff
+
+Approves or rejects
+
+Task
+
+6.3
+
+6.3
+
+System
+
+Records the answer and its time on the seat
+
+Task
+
+6.4
+
+6.4
+
+System
+
+Any seat rejected?
+
+Decision
+
+Yes: 6.5. No: 6.6
+
+6.5
+
+System
+
+Sets the session to rejected; the date becomes free;
+queues outcome notifications
+
+Task
+
+End 6.B
+
+6.6
+
+System
+
+All seats approved?
+
+Decision
+
+Yes: 6.7. No: End 6.A
+
+6.7
+
+System
+
+Sets the session to confirmed with the time; queues
+outcome notifications
+
+Task
+
+End 6.C
+
+End
+
+Lane
+
+Meaning
+
+6.A
+
+Professor / staff
+
+Answer recorded; the session stays assigned and waits for the other professors.
+
+6.B
+
+Student, Professor
+
+Session rejected; everyone sees the result and receives a Bale message.
+
+6.C
+
+Student, Professor
+
+Session confirmed; messaging opens; everyone receives a Bale message.
+
+Thesis Defense Scheduling System | Complete Project Documentation (v2)
+
+Page 29
+
+6.10 Phase 7: Cancellation (DFD 7.0)
+Either side can withdraw an assigned or confirmed session. Rescheduling is a cancellation followed by phase 4.
+Step
+
+Lane
+
+Activity
+
+Type
+
+Next / branches
+
+7.0
+
+Student /
+Professor
+
+Needs to cancel
+
+Start
+
+7.1
+
+7.1
+
+Student /
+Professor
+
+Requests cancellation with an optional reason
+
+Task
+
+7.2
+
+7.2
+
+System
+
+Is the session assigned or confirmed?
+
+Decision
+
+Yes: 7.3. No: End 7.R
+
+7.3
+
+System
+
+Sets cancelled with who, when and why; the date
+becomes free
+
+Task
+
+7.4
+
+7.4
+
+System
+
+Sends an in-app notice to the other parties
+
+Task
+
+End 7.A
+
+End
+
+Lane
+
+Meaning
+
+7.R
+
+System
+
+Cancellation refused: the session is requested, rejected or already cancelled.
+
+7.A
+
+Student, Professor
+
+Session cancelled and the others informed.
+
+6.11 Phase 8: Messaging (DFD 8.0)
+Communication opens only after confirmation.
+Step
+
+Lane
+
+Activity
+
+Type
+
+Next / branches
+
+8.0
+
+Student /
+Professor
+
+Session confirmed: messaging becomes possible
+
+Start
+
+8.1
+
+8.1
+
+Student /
+Professor
+
+Writes a message
+
+Task
+
+8.2
+
+8.2
+
+System
+
+Is the session confirmed and the sender a member?
+
+Decision
+
+Yes: 8.3. No: End 8.R
+
+8.3
+
+System
+
+Saves the message
+
+Task
+
+8.4
+
+8.4
+
+Student /
+Professor
+
+Reads the thread
+
+Task
+
+End 8.A
+
+End
+
+Lane
+
+Meaning
+
+8.R
+
+System
+
+Message refused: not confirmed or not a member.
+
+8.A
+
+Student, Professor
+
+Message saved and thread visible.
+
+6.12 Phase 9: Bale notifications (DFD 9.0)
+Two triggers feed this phase: outcome records queued by phases 5 and 6, and the daily timer for reminders.
+Step
+
+Lane
+
+Activity
+
+Type
+
+Next / branches
+
+9.0
+
+System
+
+Daily timer fires
+
+Start
+
+9.3
+
+9.1
+
+System
+
+Outcome records are pending (queued in phases 5 or 6)
+
+Start
+
+9.5
+
+9.3
+
+System
+
+Finds confirmed sessions whose date is tomorrow and
+creates reminder records for the student and each
+professor
+
+Task
+
+9.4
+
+9.4
+
+System
+
+Already sent for this session, recipient and type?
+
+Decision
+
+Yes: End 9.S. No: 9.5
+
+9.5
+
+System
+
+Has the recipient linked a Bale account?
+
+Decision
+
+Yes: 9.6. No: End 9.K
+
+9.6
+
+System
+
+Sends the message (chat id and text) to Bale
+
+Task
+
+9.7
+
+9.7
+
+Bale Platform
+
+Delivers to the user and reports the status
+
+Task
+
+9.8
+
+9.8
+
+System
+
+Delivered?
+
+Decision
+
+Yes: End 9.D. No: End 9.F
+
+9.9
+
+System
+
+Records the final status in the notification log
+
+Task
+
+-
+
+Thesis Defense Scheduling System | Complete Project Documentation (v2)
+
+Page 30
+
+End
+
+Lane
+
+Meaning
+
+9.S
+
+System
+
+Skipped as duplicate: nothing is sent again.
+
+9.K
+
+System
+
+Skipped: no Bale link; recorded as skipped; the user still sees all statuses in the app.
+
+9.D
+
+System
+
+Delivered; recorded as sent.
+
+9.F
+
+System
+
+Failed; recorded as failed with the reason and retried at the next run.
+
+6.13 Decision points
+Decision
+
+Question
+
+Branches
+
+Business rule
+
+1.5
+
+Valid credentials and active account?
+
+Yes / No
+
+Deactivated accounts cannot log in.
+
+1.11
+
+Link code valid?
+
+Yes / No
+
+Codes expire and work once.
+
+2.5
+
+Slot valid?
+
+Yes / No
+
+Grid window, overlap and committee
+membership.
+
+4.3
+
+Active request exists?
+
+No / Yes
+
+One active request per student.
+
+5.3
+
+Assign or decline?
+
+Assign / Decline
+
+Only the administrator decides.
+
+5.5
+
+Occurrence free and no overlap?
+
+Yes / No
+
+No double booking.
+
+6.4 and 6.6
+
+Any rejected? All approved?
+
+Rejected / Confirmed /
+Waiting
+
+Unanimous approval confirms.
+
+7.2
+
+Assigned or confirmed?
+
+Yes / No
+
+Only live sessions can be cancelled.
+
+8.2
+
+Confirmed and member?
+
+Yes / No
+
+Messaging only in confirmed sessions.
+
+9.4, 9.5, 9.8
+
+Duplicate? Linked? Delivered?
+
+See phase 9
+
+No duplicates; missing link is skipped; failures
+retried.
+
+6.14 Hand-offs between lanes
+From
+
+To
+
+Hand-off
+
+Medium
+
+Student
+
+System
+
+Request with note (4.2)
+
+App
+
+System
+
+Administrator
+
+New request notice (4.5)
+
+In-app notice
+
+Administrator
+
+System
+
+Assignment or decline (5.4, 5.9)
+
+App
+
+System
+
+Professor
+
+Assigned request notice (5.8)
+
+In-app notice
+
+Professor
+
+System
+
+Approve or reject (6.2)
+
+App
+
+System
+
+Bale Platform
+
+Outcome and reminder messages (9.6)
+
+Bale bot API
+
+Bale Platform
+
+System
+
+Delivery status (9.7), link event (1.10)
+
+Bale bot API
+
+Bale Platform
+
+Student / Professor
+
+Outcome and reminder messages
+
+Bale chat
+
+6.15 End-to-end narrative (main scenario)
+• An administrator creates accounts and a committee. Professors and committee members log in and publish
+single and recurring slots.
+
+• A student logs in, opens the weekly grid, sees who is available and when, and optionally downloads the PDF.
+• The student submits a request with an optional note. The administrator receives a notice.
+• The administrator reviews the grid and assigns the request to a slot and date. Seats are created and the
+professors are notified in the app.
+
+• Each professor approves or rejects. When all approve, the session is confirmed and everyone receives a Bale
+message; any rejection rejects it and frees the date.
+
+Thesis Defense Scheduling System | Complete Project Documentation (v2)
+
+Page 31
+
+• The confirmed participants exchange messages. The day before the defense, the daily timer sends a Bale
+reminder to the student and each professor.
+
+• If plans change, the student or a professor cancels; a new request starts the cycle again.
+
+6.16 Change log from swimlane version 1
+Item
+
+Version 1
+
+Version 2
+
+Lanes
+
+Student, Professor, Administrator, System, Email
+Service
+
+Same, with Bale Platform replacing Email Service;
+Administrator is a full workflow lane
+
+Phases
+
+7
+
+9 (new: Weekly schedule, Assignment; Availability
+widened to committees)
+
+Request phase
+
+Browse professors, select committee, compute
+common times, choose a time
+
+Submit a request with an optional note only
+
+Slot reservation
+
+Slots reserved on submission
+
+Date booked at assignment
+
+Reminder
+
+Email one day before
+
+Bale message one day before, plus Bale outcome
+messages
+
+Access
+
+Login and account management
+
+Also Bale account linking
+
+Thesis Defense Scheduling System | Complete Project Documentation (v2)
+
+Page 32
+
+7. UML Design
+7.1 Overview
+The UML design models the system from four angles. A use case model lists what each actor can do. A class
+model shows the domain classes (from the ERD) and the service classes that implement the DFD processes.
+Sequence scenarios show how objects exchange messages in time for the ten most important scenarios. State
+machines define the legal life cycles of the objects whose status changes. Everything is given as tables.
+Model
+
+Question it answers
+
+Section
+
+Use case
+
+What can each actor do with the system?
+
+7.2
+
+Class (domain and
+service)
+
+What are the classes, what do they hold and do, and how are they related?
+
+7.3, 7.4
+
+Sequence
+
+In what order do actors and classes interact in each scenario?
+
+7.5
+
+State machine
+
+Which states can an object be in and what moves it between them?
+
+7.6
+
+7.2 Use case model
+7.2.1 Actors
+Actor
+
+Type
+
+Description
+
+User
+
+Abstract
+
+Generalization of every human actor; can log in and link a Bale account.
+
+Student
+
+Primary
+
+Views the schedule, submits requests, follows status, messages, cancels.
+
+Professor / staff
+
+Primary
+
+Defines slots, views the schedule, responds to assigned defenses, messages,
+cancels.
+
+Administrator
+
+Primary
+
+Manages accounts and committees, assigns or declines requests.
+
+Bale Platform
+
+Secondary (system)
+
+Delivers messages and relays link events and delivery status.
+
+Daily timer
+
+Secondary (time)
+
+Starts the daily reminder run.
+
+Student, Professor / staff and Administrator generalize User. Professor / staff covers both the professor and
+higher_education_staff roles.
+
+7.2.2 Use cases
+ID
+
+Use case
+
+Actor
+
+Summary
+
+Process
+
+UC1
+
+Log in
+
+User
+
+Enter credentials and receive the role interface.
+
+1.0
+
+UC2
+
+Manage accounts
+
+Administrator
+
+Create or deactivate an account.
+
+1.0
+
+UC3
+
+Link Bale account
+
+User
+
+Obtain a code and send it to the bot.
+
+1.0
+
+UC4
+
+Manage committees
+
+Administrator
+
+Create a committee and maintain its members.
+
+2.0
+
+UC5
+
+Define availability slot
+
+Professor / staff
+
+Publish a single or recurring slot for self or a
+committee.
+
+2.0
+
+UC6
+
+Withdraw slot
+
+Professor / staff
+
+Remove a slot from the grid.
+
+2.0
+
+UC7
+
+View weekly schedule
+
+Student, Professor,
+Administrator
+
+See the Saturday to Wednesday grid.
+
+3.0
+
+UC8
+
+Download schedule PDF
+
+Student, Professor,
+Administrator
+
+Export the grid as PDF.
+
+3.0
+
+UC9
+
+Submit defense request
+
+Student
+
+Submit a request with an optional note.
+
+4.0
+
+UC10
+
+Track request status
+
+Student
+
+See the status of the request.
+
+4.0, 6.0
+
+UC11
+
+Review pending requests
+
+Administrator
+
+List requested sessions.
+
+5.0
+
+UC12
+
+Assign request
+
+Administrator
+
+Choose slot and date; creates seats.
+
+5.0
+
+Thesis Defense Scheduling System | Complete Project Documentation (v2)
+
+Page 33
+
+ID
+
+Use case
+
+Actor
+
+Summary
+
+Process
+
+UC13
+
+Decline request
+
+Administrator
+
+Reject a request with a reason.
+
+5.0
+
+UC14
+
+Respond to assigned
+defense
+
+Professor / staff
+
+Approve or reject a seat.
+
+6.0
+
+UC15
+
+Cancel defense
+
+Student, Professor / staff
+
+Cancel an assigned or confirmed session.
+
+7.0
+
+UC16
+
+Send message
+
+Student, Professor / staff
+
+Write in a confirmed session.
+
+8.0
+
+UC17
+
+Read message thread
+
+Student, Professor / staff
+
+Read the conversation.
+
+8.0
+
+UC18
+
+Send Bale notification
+
+Bale Platform, Daily timer
+
+Deliver outcomes and reminders.
+
+9.0
+
+UC19
+
+Notify in the app
+
+(internal)
+
+Show an in-app notice.
+
+4.0, 5.0,
+7.0
+
+7.2.3 Relationships between use cases
+Relationship
+
+Base
+
+Included or extending
+
+Reason
+
+include
+
+UC9 Submit defense request
+
+UC19 Notify in the app
+
+Every submission notifies the
+administrator.
+
+include
+
+UC12 Assign request
+
+UC19 Notify in the app
+
+Assigned professors are told.
+
+include
+
+UC15 Cancel defense
+
+UC19 Notify in the app
+
+Other parties are told.
+
+include
+
+UC12, UC13, UC14
+
+UC18 Send Bale notification (through a
+queued record)
+
+Outcomes are sent by Bale.
+
+include
+
+UC8 Download schedule PDF
+
+UC7 View weekly schedule
+
+The PDF is the same grid.
+
+extend
+
+UC3 Link Bale account
+
+UC1 Log in (optional, after login)
+
+Linking is optional.
+
+precondition
+
+UC16, UC17
+
+Session confirmed
+
+Messaging opens after confirmation.
+
+7.2.4 Key use case specifications
+UC5 Define availability slot
+Field
+
+Content
+
+Actor
+
+Professor / staff
+
+Preconditions
+
+Logged in; if the owner is a committee, the professor is a member.
+
+Main flow
+
+1. Choose owner (self or committee). 2. Choose single or recurring. 3. Enter date, or pattern (odd days,
+even days, weekly with weekday) and validity range. 4. Enter start and end time. 5. Submit. 6. System
+validates and saves the slot as available.
+
+Alternative flows
+
+5a. Outside Saturday to Wednesday or outside 08:00 to 17:00: refused. 5b. Overlaps another slot of the
+owner: refused. 5c. Not a member of the committee: refused.
+
+Postcondition
+
+The slot appears in the weekly grid on every matching day.
+
+UC7 View weekly schedule
+Field
+
+Content
+
+Actors
+
+Student, Professor / staff, Administrator
+
+Preconditions
+
+Logged in.
+
+Main flow
+
+1. Open the schedule page. 2. Choose a week. 3. System expands slots into dates and builds the grid. 4.
+System shows each cell with owner name and Single or Recurring.
+
+Alternative flows
+
+3a. No slots in the week: an empty grid is shown.
+
+Postcondition
+
+Nothing changes; students cannot select a cell or a professor.
+
+Thesis Defense Scheduling System | Complete Project Documentation (v2)
+
+Page 34
+
+UC9 Submit defense request
+Field
+
+Content
+
+Actor
+
+Student
+
+Preconditions
+
+Logged in as a student with a profile (thesis title, degree level).
+
+Main flow
+
+1. Open the request form. 2. Enter an optional note. 3. Submit. 4. System checks that no request is active.
+5. System creates the session with status requested. 6. System notifies the administrator in the app and
+shows a receipt.
+
+Alternative flows
+
+4a. An active request exists: refused with a message.
+
+Postcondition
+
+A session with status requested exists; no professor is chosen.
+
+UC12 Assign request
+Field
+
+Content
+
+Actor
+
+Administrator
+
+Preconditions
+
+A session with status requested exists.
+
+Main flow
+
+1. Open pending requests. 2. Review the request and the weekly grid. 3. Choose a slot and a date. 4.
+System checks the occurrence is free and no professor overlaps. 5. System sets status assigned, stores
+date and times, creates seats, and notifies the professors in the app.
+
+Alternative flows
+
+4a. Occurrence taken or overlap: refused; choose again. 3a. Decline instead (UC13).
+
+Postcondition
+
+Session assigned with one pending seat per professor.
+
+UC14 Respond to assigned defense
+Field
+
+Content
+
+Actor
+
+Professor / staff
+
+Preconditions
+
+The professor has a pending seat in an assigned session.
+
+Main flow
+
+1. Open assigned requests. 2. Approve or reject. 3. System records the answer. 4. If any seat is rejected:
+session rejected. 5. If all are approved: session confirmed. 6. System queues Bale outcome notifications.
+
+Alternative flows
+
+5a. Some seats still pending: the session stays assigned.
+
+Postcondition
+
+Seat answered; session confirmed, rejected or still assigned.
+
+UC18 Send Bale notification
+Field
+
+Content
+
+Actors
+
+Daily timer (reminders), Bale Platform
+
+Preconditions
+
+Outcome records pending, or confirmed sessions dated tomorrow.
+
+Main flow
+
+1. Collect pending records or create reminder records. 2. Skip duplicates. 3. For each recipient with a
+linked Bale account, send the message. 4. Bale reports the status. 5. System records sent or failed.
+
+Alternative flows
+
+3a. No Bale link: record skipped. 4a. Delivery failed: record failed with the reason; retried at the next run.
+
+Postcondition
+
+Every recipient has a notification record with a final status.
+
+7.3 Domain class model
+7.3.1 Classes
+Attributes use the ERD names. Visibility is public for operations and private for attributes unless stated. Foreign
+keys appear as associations in 7.3.3.
+
+Thesis Defense Scheduling System | Complete Project Documentation (v2)
+
+Page 35
+
+User (abstract)
+Base class of all roles; holds login and Bale link data.
+Attributes
+
+Operations
+
+userId: int
+username: string
+passwordHash: string
+email: string [0..1]
+fullName: string
+role: Role
+isActive: boolean
+baleChatId: string [0..1]
+baleLinkedAt: datetime [0..1]
+baleLinkCode: string [0..1]
+baleLinkExpiresAt: datetime [0..1]
+createdAt: datetime
+
+login(): boolean
+logout(): void
+requestBaleLinkCode(): string
+linkBale(chatId, code): boolean
+viewSchedule(week): Schedule
+
+Student (extends User)
+Student profile.
+Attributes
+
+Operations
+
+studentNumber: string
+degreeLevel: DegreeLevel
+thesisTitle: string
+
+submitRequest(note): DefenseSession
+cancelDefense(session, reason): void
+trackStatus(): DefenseSession
+
+Professor (extends User)
+Professor and Higher Education staff profile.
+Attributes
+
+Operations
+
+department: string
+academicTitle: string
+officeLocation: string [0..1]
+
+defineSlot(owner, type, details): AvailabilitySlot
+withdrawSlot(slot): void
+respond(seat, approve: boolean): void
+cancelDefense(session, reason): void
+
+Administrator (extends User)
+Account and scheduling manager; no extra attributes.
+Attributes
+
+Operations
+
+(none)
+
+createAccount(details): User
+deactivateAccount(user): void
+createCommittee(name, members): Committee
+assignRequest(session, slot, date): void
+declineRequest(session, reason): void
+
+Committee
+Named standing group of professors.
+Attributes
+
+Operations
+
+committeeId: int
+name: string
+isActive: boolean
+createdAt: datetime
+
+addMember(professor): void
+removeMember(professor): void
+deactivate(): void
+members(): Professor[]
+
+Thesis Defense Scheduling System | Complete Project Documentation (v2)
+
+Page 36
+
+CommitteeMember
+Association class between Committee and Professor.
+Attributes
+
+Operations
+
+committeeMemberId: int
+
+(none)
+
+AvailabilitySlot
+Published time block of a professor or committee.
+Attributes
+
+Operations
+
+slotId: int
+slotType: SlotType
+slotDate: date [0..1]
+recurrencePattern: RecurrencePattern [0..1]
+weekday: Weekday [0..1]
+startTime: time
+endTime: time
+validFrom: date [0..1]
+validUntil: date [0..1]
+status: SlotStatus
+createdAt: datetime
+
+occursOn(date): boolean
+expand(weekStart): Occurrence[]
+isFree(date): boolean
+withdraw(): void
+ownerName(): string
+
+DefenseSession
+One student's defense request.
+Attributes
+
+Operations
+
+sessionId: int
+scheduledDate: date [0..1]
+startTime: time [0..1]
+endTime: time [0..1]
+status: SessionStatus
+note: string [0..1]
+createdAt: datetime
+assignedAt: datetime [0..1]
+decisionReason: string [0..1]
+confirmedAt: datetime [0..1]
+cancelledAt: datetime [0..1]
+cancelReason: string [0..1]
+
+assign(slot, date, admin): void
+decline(reason, admin): void
+confirm(): void
+reject(): void
+cancel(by: User, reason): void
+allApproved(): boolean
+anyRejected(): boolean
+isActive(): boolean
+
+DefenseParticipant
+One professor's seat in a session.
+Attributes
+
+Operations
+
+participantId: int
+status: SeatStatus
+respondedAt: datetime [0..1]
+
+approve(): void
+reject(): void
+
+Message
+Message in a confirmed session.
+Attributes
+
+Operations
+
+messageId: int
+content: string
+sentAt: datetime
+
+send(): void
+
+Thesis Defense Scheduling System | Complete Project Documentation (v2)
+
+Page 37
+
+Notification
+Bale message log entry.
+Attributes
+
+Operations
+
+notificationId: int
+type: NotificationType
+scheduledFor: datetime
+sentAt: datetime [0..1]
+status: NotificationStatus
+failureReason: string [0..1]
+
+markSent(): void
+markFailed(reason): void
+markSkipped(): void
+
+7.3.2 Enumerations
+Enumeration
+
+Literals
+
+Role
+
+student, professor, higher_education_staff, admin
+
+DegreeLevel
+
+master, phd
+
+SlotType
+
+single, recurring
+
+RecurrencePattern
+
+odd_days, even_days, weekly
+
+Weekday
+
+sat, sun, mon, tue, wed
+
+SlotStatus
+
+available, withdrawn
+
+SessionStatus
+
+requested, assigned, confirmed, rejected, cancelled
+
+SeatStatus
+
+pending, approved, rejected
+
+NotificationType
+
+outcome, reminder
+
+NotificationStatus
+
+pending, sent, failed, skipped
+
+7.3.3 Relationships
+Kind
+
+From (multiplicity)
+
+To (multiplicity)
+
+Role / meaning
+
+Generalization
+
+Student, Professor, Administrator
+
+User
+
+Subclasses of the abstract User.
+
+Association
+
+Student 1
+
+DefenseSession 0..*
+
+requests
+
+Association
+
+Professor 1
+
+AvailabilitySlot 0..*
+
+owns (optional on slot side)
+
+Association
+
+Committee 1
+
+AvailabilitySlot 0..*
+
+owns (optional on slot side); exactly
+one of professor or committee owns a
+slot
+
+Association class
+
+Committee 1..*
+
+Professor 0..*
+
+membership via CommitteeMember
+
+Association
+
+AvailabilitySlot 0..1
+
+DefenseSession 0..*
+
+assigned to (slot is empty until
+assignment)
+
+Association
+
+Administrator 0..1
+
+DefenseSession 0..*
+
+assignedBy
+
+Composition
+
+DefenseSession 1
+
+DefenseParticipant 0..*
+
+seats; a seat cannot exist without its
+session
+
+Association
+
+Professor 1
+
+DefenseParticipant 0..*
+
+sits on
+
+Composition
+
+DefenseSession 1
+
+Message 0..*
+
+thread
+
+Association
+
+User 1
+
+Message 0..*
+
+sender
+
+Composition
+
+DefenseSession 1
+
+Notification 0..*
+
+triggers
+
+Association
+
+User 1
+
+Notification 0..*
+
+recipient
+
+Association
+
+User 0..1
+
+DefenseSession 0..*
+
+cancelledBy
+
+Association
+
+Administrator 1
+
+Committee 0..*
+
+creates
+
+Dependency
+
+AvailabilitySlot
+
+Weekday, RecurrencePattern
+
+uses enumerations to expand
+occurrences
+
+Thesis Defense Scheduling System | Complete Project Documentation (v2)
+
+Page 38
+
+7.4 Service layer class model
+Service classes implement the DFD processes. They hold no persistent state; they use the domain classes and
+gateways. Controllers of the web and Android back-end call them.
+Service
+
+DFD
+process
+
+Operations
+
+Uses
+
+AuthService
+
+1.0
+
+authenticate(username, password), createAccount(details),
+deactivate(user), issueBaleLinkCode(user),
+completeBaleLink(code, chatId)
+
+User, Student, Professor
+
+CommitteeService
+
+2.0
+
+create(name, members), addMember(c, p),
+removeMember(c, p), deactivate(c)
+
+Committee, CommitteeMember,
+Professor
+
+SlotService
+
+2.0
+
+define(owner, details), withdraw(slot), validate(details)
+
+AvailabilitySlot, Committee
+
+ScheduleService
+
+3.0
+
+buildWeek(weekStart): Schedule, exportPdf(weekStart): file
+
+AvailabilitySlot, Professor,
+Committee
+
+RequestService
+
+4.0
+
+submit(student, note): DefenseSession
+
+DefenseSession, Student,
+NotificationService
+
+AssignmentService
+
+5.0
+
+pending(): DefenseSession[], assign(session, slot, date,
+admin), decline(session, reason, admin)
+
+DefenseSession, AvailabilitySlot,
+DefenseParticipant, Committee,
+NotificationService
+
+ResponseService
+
+6.0
+
+recordDecision(seat, approve)
+
+DefenseParticipant,
+DefenseSession, NotificationService
+
+CancellationServic
+e
+
+7.0
+
+cancel(session, by, reason)
+
+DefenseSession
+
+MessageService
+
+8.0
+
+post(session, sender, content), thread(session)
+
+Message, DefenseSession,
+DefenseParticipant
+
+NotificationService
+
+9.0
+
+queueOutcome(session), runDailyReminders(), retryFailed()
+
+Notification, User, BaleGateway
+
+BaleGateway
+
+9.0, 1.0
+
+send(chatId, text): result, handleUpdate(update)
+
+External Bale Platform (bot API)
+
+DailyScheduler
+
+9.0
+
+runDaily()
+
+NotificationService
+
+Service dependencies: RequestService, AssignmentService and ResponseService depend on NotificationService;
+NotificationService depends on BaleGateway; DailyScheduler depends on NotificationService; ScheduleService is
+used by the controllers only and has no write dependency.
+
+7.5 Sequence scenarios
+Each table lists messages in time order. Participants appear as lifelines. Return messages are marked "return".
+Fragments are written as alt (alternatives), opt (optional) or loop.
+
+S1 Log in
+Lifelines: User, Client app, API, AuthService, Database
+#
+
+From
+
+To
+
+Message
+
+1
+
+User
+
+Client app
+
+enter credentials
+
+2
+
+Client app
+
+API
+
+POST /login
+
+3
+
+API
+
+AuthService
+
+authenticate(username, password)
+
+4
+
+AuthService
+
+Database
+
+find user, check hash and isActive
+
+5
+
+AuthService
+
+API
+
+return result and role
+
+6
+
+API
+
+Client app
+
+return token and role
+
+7
+
+Client app
+
+User
+
+show interface for the role
+
+Thesis Defense Scheduling System | Complete Project Documentation (v2)
+
+Notes
+
+alt valid: result with role; refused:
+error
+
+Page 39
+
+S2 Link Bale account
+Lifelines: User, Client app, API, AuthService, Database, Bale Platform, Bale bot
+#
+
+From
+
+To
+
+Message
+
+Notes
+
+1
+
+User
+
+Client app
+
+choose "Link Bale"
+
+2
+
+Client app
+
+API
+
+request link code
+
+3
+
+API
+
+AuthService
+
+issueBaleLinkCode(user)
+
+4
+
+AuthService
+
+Database
+
+save code and expiry
+
+5
+
+API
+
+Client app
+
+return code, show instructions
+
+6
+
+User
+
+Bale Platform
+
+send code to the bot
+
+outside the system
+
+7
+
+Bale Platform
+
+API
+
+link event (code, chat id)
+
+via BaleGateway.handleUpdate
+
+8
+
+API
+
+AuthService
+
+completeBaleLink(code, chatId)
+
+9
+
+AuthService
+
+Database
+
+find user by unexpired code
+
+alt valid: save chat id, clear code;
+invalid: refuse
+
+10
+
+API
+
+Bale Platform
+
+send confirmation text
+
+Bale delivers it to the user
+
+S3 Define a single or recurring slot
+Lifelines: Professor, Client app, API, SlotService, Database
+#
+
+From
+
+To
+
+Message
+
+1
+
+Professor
+
+Client app
+
+fill the slot form (owner, type, date or pattern,
+times)
+
+2
+
+Client app
+
+API
+
+POST /slots
+
+3
+
+API
+
+SlotService
+
+define(owner, details)
+
+4
+
+SlotService
+
+SlotService
+
+validate(details)
+
+5
+
+SlotService
+
+Database
+
+check overlap and committee membership
+
+6
+
+SlotService
+
+Database
+
+insert slot with status available
+
+7
+
+API
+
+Client app
+
+return slot or error
+
+Notes
+
+window Saturday to Wednesday,
+08:00 to 17:00; end after start
+
+alt valid; invalid: return error
+
+S4 View and download the weekly schedule
+Lifelines: User, Client app, API, ScheduleService, Database
+#
+
+From
+
+To
+
+Message
+
+1
+
+User
+
+Client app
+
+open schedule, choose week
+
+2
+
+Client app
+
+API
+
+GET /schedule?week
+
+3
+
+API
+
+ScheduleService
+
+buildWeek(weekStart)
+
+4
+
+ScheduleService
+
+Database
+
+read available slots, names
+
+5
+
+ScheduleService
+
+ScheduleService
+
+expand recurring slots into dates
+
+6
+
+API
+
+Client app
+
+return grid
+
+7
+
+Client app
+
+User
+
+show grid (owner name, Single or Recurring)
+
+8
+
+User
+
+Client app
+
+download PDF
+
+9
+
+Client app
+
+API
+
+GET /schedule.pdf
+
+10
+
+API
+
+ScheduleService
+
+exportPdf(weekStart)
+
+11
+
+API
+
+Client app
+
+return PDF file
+
+Thesis Defense Scheduling System | Complete Project Documentation (v2)
+
+Notes
+
+loop over slots
+
+opt
+
+Page 40
+
+S5 Submit a defense request
+Lifelines: Student, Client app, API, RequestService, Database, NotificationService
+#
+
+From
+
+To
+
+Message
+
+1
+
+Student
+
+Client app
+
+enter optional note, submit
+
+2
+
+Client app
+
+API
+
+POST /requests
+
+3
+
+API
+
+RequestService
+
+submit(student, note)
+
+4
+
+RequestService
+
+Database
+
+count active sessions of the student
+
+5
+
+RequestService
+
+Database
+
+insert session status requested
+
+6
+
+RequestService
+
+NotificationService
+
+notify administrator in-app
+
+7
+
+API
+
+Client app
+
+return receipt
+
+8
+
+Client app
+
+Student
+
+show receipt and status requested
+
+Notes
+
+alt none: continue; exists: return
+error
+
+S6 Assign a request
+Lifelines: Administrator, Client app, API, AssignmentService, Database, NotificationService
+#
+
+From
+
+To
+
+Message
+
+1
+
+Administrator
+
+Client app
+
+open pending requests
+
+2
+
+Client app
+
+API
+
+GET /requests?status=requested
+
+3
+
+Administrator
+
+Client app
+
+choose slot and date, submit
+
+4
+
+Client app
+
+API
+
+POST /requests/{id}/assign
+
+5
+
+API
+
+AssignmentService
+
+assign(session, slot, date, admin)
+
+6
+
+AssignmentService
+
+Database
+
+check occurrence free and professor overlap
+
+7
+
+AssignmentService
+
+Database
+
+update session to assigned with date and times
+
+8
+
+AssignmentService
+
+Database
+
+insert one pending seat per professor
+
+9
+
+AssignmentService
+
+NotificationService
+
+notify professors in-app
+
+10
+
+API
+
+Client app
+
+return result
+
+Notes
+
+alt free: continue; taken: return
+error
+
+loop over professors
+
+alt decline: set rejected, queue
+outcome
+
+S7 Professor decision
+Lifelines: Professor, Client app, API, ResponseService, Database, NotificationService
+#
+
+From
+
+To
+
+Message
+
+1
+
+Professor
+
+Client app
+
+approve or reject, submit
+
+2
+
+Client app
+
+API
+
+POST /seats/{id}/decision
+
+3
+
+API
+
+ResponseService
+
+recordDecision(seat, approve)
+
+4
+
+ResponseService
+
+Database
+
+update seat status and time
+
+5
+
+ResponseService
+
+Database
+
+read all seats of the session
+
+6
+
+ResponseService
+
+Database
+
+set session rejected, date free
+
+alt any rejected
+
+7
+
+ResponseService
+
+Database
+
+set session confirmed
+
+alt all approved
+
+8
+
+ResponseService
+
+NotificationService
+
+queueOutcome(session)
+
+in both of the above cases
+
+9
+
+API
+
+Client app
+
+return result
+
+alt still pending: no change to the
+session
+
+Thesis Defense Scheduling System | Complete Project Documentation (v2)
+
+Notes
+
+Page 41
+
+S8 Daily Bale reminder
+Lifelines: Daily timer, DailyScheduler, NotificationService, Database, BaleGateway, Bale Platform
+#
+
+From
+
+To
+
+Message
+
+Notes
+
+1
+
+Daily timer
+
+DailyScheduler
+
+start run
+
+2
+
+DailyScheduler
+
+NotificationService
+
+runDailyReminders()
+
+3
+
+NotificationService
+
+Database
+
+find confirmed sessions dated tomorrow
+
+4
+
+NotificationService
+
+Database
+
+create reminder records for student and
+professors
+
+loop; alt record exists: skip
+
+5
+
+NotificationService
+
+Database
+
+read bale_chat_id
+
+alt not linked: mark skipped
+
+6
+
+NotificationService
+
+BaleGateway
+
+send(chatId, text)
+
+7
+
+BaleGateway
+
+Bale Platform
+
+bot API sendMessage
+
+8
+
+Bale Platform
+
+BaleGateway
+
+delivery status (return)
+
+9
+
+NotificationService
+
+Database
+
+mark sent or failed
+
+alt delivered: sent; failed: failed
+with reason
+
+S9 Cancel a defense
+Lifelines: Student or Professor, Client app, API, CancellationService, Database
+#
+
+From
+
+To
+
+Message
+
+1
+
+Student or
+Professor
+
+Client app
+
+choose cancel, enter reason
+
+2
+
+Client app
+
+API
+
+POST /sessions/{id}/cancel
+
+3
+
+API
+
+CancellationService
+
+cancel(session, by, reason)
+
+4
+
+CancellationService
+
+Database
+
+read session status
+
+5
+
+CancellationService
+
+Database
+
+set cancelled with who, when, reason
+
+6
+
+CancellationService
+
+Database
+
+notify other parties in-app
+
+7
+
+API
+
+Client app
+
+return result
+
+Notes
+
+alt assigned or confirmed:
+continue; otherwise return error
+
+reschedule = this scenario then
+S5
+
+S10 Send a message
+Lifelines: Sender, Client app, API, MessageService, Database
+#
+
+From
+
+To
+
+Message
+
+1
+
+Sender
+
+Client app
+
+write message
+
+2
+
+Client app
+
+API
+
+POST /sessions/{id}/messages
+
+3
+
+API
+
+MessageService
+
+post(session, sender, content)
+
+4
+
+MessageService
+
+Database
+
+check session confirmed and sender a member
+
+5
+
+MessageService
+
+Database
+
+insert message
+
+6
+
+API
+
+Client app
+
+return thread
+
+Thesis Defense Scheduling System | Complete Project Documentation (v2)
+
+Notes
+
+alt yes: continue; no: return error
+
+Page 42
+
+7.6 State machines
+7.6.1 DefenseSession
+Initial state leads to requested. Rejected and cancelled are final.
+From
+
+Event [guard]
+
+Action
+
+To
+
+(start)
+
+submitRequest [no active session]
+
+create session
+
+requested
+
+requested
+
+assign(slot, date) [occurrence free, no
+overlap]
+
+store date and times, create seats, notify
+professors
+
+assigned
+
+requested
+
+decline(reason)
+
+store reason, queue outcome
+
+rejected
+
+assigned
+
+decision [any seat rejected]
+
+free the date, queue outcome
+
+rejected
+
+assigned
+
+decision [all seats approved]
+
+set confirmedAt, queue outcome
+
+confirmed
+
+assigned
+
+decision [seats still pending]
+
+record answer
+
+assigned
+
+assigned
+
+cancel(by, reason)
+
+record who, when, reason, notify others
+
+cancelled
+
+confirmed
+
+cancel(by, reason)
+
+record who, when, reason, notify others
+
+cancelled
+
+rejected
+
+(none)
+
+final state; a new request is a new session (end)
+
+cancelled
+
+(none)
+
+final state; rescheduling is a new request
+
+(end)
+
+7.6.2 AvailabilitySlot
+Occupancy is not a slot state; it is derived from active sessions.
+From
+
+Event [guard]
+
+Action
+
+To
+
+(start)
+
+define [valid slot]
+
+save
+
+available
+
+available
+
+withdraw()
+
+hide from grid, keep record
+
+withdrawn
+
+withdrawn
+
+(none)
+
+final state
+
+(end)
+
+7.6.3 DefenseParticipant (seat)
+From
+
+Event [guard]
+
+Action
+
+To
+
+(start)
+
+assign
+
+create seat
+
+pending
+
+pending
+
+approve()
+
+set respondedAt
+
+approved
+
+pending
+
+reject()
+
+set respondedAt
+
+rejected
+
+approved, rejected
+
+(none)
+
+final for this session
+
+(end)
+
+7.6.4 Notification
+Failed notifications are retried until sent.
+From
+
+Event [guard]
+
+Action
+
+To
+
+(start)
+
+queue [recipient has Bale link]
+
+create record
+
+pending
+
+(start)
+
+queue [no Bale link]
+
+create record
+
+skipped
+
+pending
+
+Bale reports delivered
+
+set sentAt
+
+sent
+
+pending
+
+Bale reports error
+
+store reason
+
+failed
+
+failed
+
+next daily run, retry
+
+send again
+
+pending
+
+sent, skipped
+
+(none)
+
+final state
+
+(end)
+
+Thesis Defense Scheduling System | Complete Project Documentation (v2)
+
+Page 43
+
+7.6.5 Bale link code (attributes of User)
+A user is either unlinked or linked; the code is short-lived.
+From
+
+Event [guard]
+
+Action
+
+To
+
+unlinked
+
+requestBaleLinkCode()
+
+generate code and expiry
+
+code issued
+
+code issued
+
+link event [code valid and unexpired]
+
+save chat id, clear code
+
+linked
+
+code issued
+
+link event [code invalid or expired] or
+timeout
+
+refuse or clear code
+
+unlinked
+
+linked
+
+(none)
+
+chat id stays until changed by a new link
+
+linked
+
+7.7 Traceability across the design
+Requirement (change)
+
+ERD
+
+DFD
+
+Swimlane
+phase
+
+UML
+
+C1 Slots by professors or
+committees, single or
+recurring
+
+Committee,
+CommitteeMember,
+AvailabilitySlot
+
+2.0, D2, D3
+
+2
+
+UC4, UC5, UC6; S3; AvailabilitySlot class
+and state machine
+
+C2 Weekly grid, view and
+PDF
+
+AvailabilitySlot (derived
+grid)
+
+3.0
+
+3
+
+UC7, UC8; S4; ScheduleService
+
+C3 Students submit only a
+request; admin assigns
+
+DefenseSession (slot_id,
+assigned_by),
+DefenseParticipant
+
+4.0, 5.0
+
+4, 5
+
+UC9, UC11, UC12, UC13; S5, S6;
+DefenseSession state machine
+
+C4 Bale notifications
+
+User.bale_*, Notification
+
+9.0, E4
+
+1 (link), 9
+
+UC3, UC18; S2, S8; BaleGateway;
+Notification state machine
+
+Professor approval kept
+
+DefenseParticipant
+
+6.0
+
+6
+
+UC14; S7; seat state machine
+
+Cancellation
+
+DefenseSession cancel
+fields
+
+7.0
+
+7
+
+UC15; S9
+
+Messaging
+
+Message
+
+8.0, D6
+
+8
+
+UC16, UC17; S10
+
+7.8 Consistency checks
+Check
+
+Result
+
+Every ERD entity has a UML class
+
+Yes: User, Student, Professor, Committee, CommitteeMember, AvailabilitySlot,
+DefenseSession, DefenseParticipant, Message, Notification
+
+Every DFD process has a service and a use case
+
+Yes: processes 1.0 to 9.0 map to services and use cases UC1 to UC19
+
+Every status value appears in a state machine
+
+Yes: session, slot, seat and notification statuses are all covered
+
+Every swimlane phase has a sequence scenario
+
+Yes: phases 1 to 9 map to S1 to S10 (phase 1 has S1 and S2)
+
+Rules of the data model and data flows preserved
+
+Yes: one active request, no double booking, unanimous approval, messaging
+only when confirmed, no duplicate notifications
+
+Thesis Defense Scheduling System | Complete Project Documentation (v2)
+
+Page 44
+
+8. API Contract
+The API is shared by the web and Android clients. It is a JSON REST API under the prefix /api/v1. This section
+defines its conventions and endpoints at the level needed by both client developers; field-level schemas are
+derived from the attributes of section 4.
+
+8.1 Conventions
+Topic
+
+Convention
+
+Format
+
+JSON request and response bodies, UTF-8. Dates are ISO 8601 (YYYY-MM-DD); times are HH:MM in
+Asia/Tehran; timestamps are ISO 8601 with offset.
+
+Authentication
+
+POST /auth/login returns an access token and a refresh token. Every other call (except the Bale webhook)
+sends the access token in the Authorization header.
+
+Authorization
+
+The role in the token is checked on every call; a wrong role returns 403.
+
+Errors
+
+One format: status code plus a body with code, message and optional field errors. Codes include
+VALIDATION_ERROR, UNAUTHENTICATED, FORBIDDEN, NOT_FOUND, CONFLICT (for example slot
+occurrence taken) and RULE_VIOLATION (for example active request exists).
+
+Versioning
+
+The version is in the path. Breaking changes create /api/v2.
+
+Pagination
+
+List endpoints accept page and pageSize and return total.
+
+Idempotency
+
+Commands that create records accept an Idempotency-Key header so that a retried mobile request does not
+create a duplicate.
+
+Rate limiting
+
+Login and link-code endpoints are limited per user and per address.
+
+Enumerations
+
+Sent as the lowercase literals of section 7.3.2.
+
+8.2 Endpoints
+8.2.1 Authentication and profile (process 1.0)
+Method and path
+
+Role
+
+Purpose
+
+Key rules and errors
+
+POST /auth/login
+
+Any
+
+Log in with username and
+password.
+
+401 on wrong credentials or inactive
+account.
+
+POST /auth/refresh
+
+Any
+
+Exchange a refresh token for a
+new access token.
+
+401 if expired.
+
+POST /auth/logout
+
+Any
+
+Invalidate the refresh token.
+
+GET /me
+
+Any
+
+Current user, role, profile and Bale
+link status.
+
+POST /me/bale/link-code
+
+Student,
+Professor
+
+Create a one-time Bale link code
+and expiry.
+
+GET /me/bale
+
+Student,
+Professor
+
+Report whether a Bale account is
+linked.
+
+POST /admin/users
+
+Administrator
+
+Create an account (and student or
+professor profile).
+
+409 if username, email or student number
+exists.
+
+GET /admin/users
+
+Administrator
+
+List and search accounts.
+
+Paginated.
+
+PATCH /admin/users/{id}
+
+Administrator
+
+Deactivate or reactivate an
+account.
+
+History is kept.
+
+Thesis Defense Scheduling System | Complete Project Documentation (v2)
+
+Limited rate; replaces any earlier code.
+
+Page 45
+
+8.2.2 Committees and slots (process 2.0)
+Method and path
+
+Role
+
+Purpose
+
+Key rules and errors
+
+POST /committees
+
+Administrator
+
+Create a committee with members.
+
+409 if the name exists.
+
+GET /committees
+
+Administrator,
+Professor
+
+List committees (professors see
+their own).
+
+POST /committees/{id}/members
+
+Administrator
+
+Add a member professor.
+
+DELETE /committees/{id}/member
+s/{professorId}
+
+Administrator
+
+Remove a member.
+
+PATCH /committees/{id}
+
+Administrator
+
+Rename or deactivate.
+
+POST /slots
+
+Professor
+
+Define a single or recurring slot for
+self or a committee.
+
+GET /slots/mine
+
+Professor
+
+List own and own-committee slots.
+
+POST /slots/{id}/withdraw
+
+Professor
+
+Withdraw a slot.
+
+403 if not the owner or a member.
+
+409 if already a member.
+
+422 outside Saturday to Wednesday or
+08:00 to 17:00; 409 on overlap; 403 if not
+a member.
+
+8.2.3 Weekly schedule (process 3.0)
+Method and path
+
+Role
+
+Purpose
+
+Key rules and errors
+
+GET
+/schedule?week=YYYY-MM-DD
+
+Any
+
+Return the grid for the week
+containing the date: cells with
+owner name, type and times.
+
+The week starts on Saturday.
+
+GET /schedule.pdf?week=YYYY-M
+M-DD
+
+Any
+
+Download the same grid as PDF.
+
+Content-Type application/pdf.
+
+8.2.4 Requests and assignment (processes 4.0 and 5.0)
+Method and path
+
+Role
+
+Purpose
+
+Key rules and errors
+
+POST /requests
+
+Student
+
+Submit a request with an optional
+note.
+
+No professor field; 409
+RULE_VIOLATION if a request is active.
+
+GET /requests/mine
+
+Student
+
+List own requests with status and
+assignment.
+
+GET /requests?status=requested
+
+Administrator
+
+List requests waiting for
+assignment.
+
+GET /requests/{id}
+
+Student (own),
+Administrator,
+assigned
+Professor
+
+Request details.
+
+POST /requests/{id}/assign
+
+Administrator
+
+Assign slotId and date.
+
+409 if the occurrence is taken; 409 on
+professor overlap; 422 if the date does not
+match the slot.
+
+POST /requests/{id}/decline
+
+Administrator
+
+Decline with a reason.
+
+Reason required.
+
+Paginated, oldest first.
+
+8.2.5 Responses, cancellation and messages (processes 6.0, 7.0 and 8.0)
+Method and path
+
+Role
+
+Purpose
+
+GET /seats/mine?status=pending
+
+Professor
+
+List assigned defenses awaiting an
+answer.
+
+POST /seats/{id}/decision
+
+Professor
+
+Approve or reject.
+
+403 if not the seat owner; 409 if already
+answered.
+
+POST /sessions/{id}/cancel
+
+Student (own),
+assigned
+Professor
+
+Cancel with an optional reason.
+
+409 if the session is not assigned or
+confirmed.
+
+GET /sessions/{id}/messages
+
+Student (own),
+assigned
+Professor
+
+Read the thread.
+
+403 if not a member.
+
+Thesis Defense Scheduling System | Complete Project Documentation (v2)
+
+Key rules and errors
+
+Page 46
+
+Method and path
+
+Role
+
+Purpose
+
+Key rules and errors
+
+POST /sessions/{id}/messages
+
+Student (own),
+assigned
+Professor
+
+Send a message.
+
+409 if the session is not confirmed.
+
+GET /me/dashboard
+
+Any
+
+Counts and lists of items needing
+attention (new requests, assigned
+defenses, cancellations).
+
+In-app notices are derived from session
+and seat states.
+
+8.2.6 Integration endpoints (process 9.0 and 1.0)
+Method and path
+
+Role
+
+Purpose
+
+Key rules and errors
+
+POST /integrations/bale/webhook
+
+Bale Platform
+
+Receive bot updates, in particular
+link-code messages.
+
+Verified with a secret token; not for clients.
+
+(internal job) runDailyReminders
+
+Scheduler
+
+Create and send reminders for
+tomorrow's confirmed sessions.
+
+Not exposed over HTTP.
+
+(internal job)
+retryFailedNotifications
+
+Scheduler
+
+Retry failed Bale messages.
+
+Not exposed over HTTP.
+
+8.3 Example exchanges
+Scenario
+
+Request
+
+Response
+
+Define a recurring slot
+
+POST /slots with owner type professor, slotType recurring,
+recurrencePattern odd_days, startTime 09:00, endTime 11:00,
+validFrom and validUntil
+
+201 with slotId, status available
+
+Assign a request
+
+POST /requests/57/assign with slotId 12 and date 2026-11-04
+
+200 with status assigned, seats listed;
+or 409 CONFLICT if the occurrence is
+taken
+
+Professor approves
+
+POST /seats/301/decision with approve true
+
+200 with seat approved and session
+status assigned or confirmed
+
+Download schedule
+
+GET /schedule.pdf?week=2026-11-07
+
+200 application/pdf
+
+9. User Interface Design
+This section describes the screens of each role. It is a functional description, not a visual mock-up: it says what
+each screen shows, which actions it offers and which states it must handle. The Android application follows the
+same screen list with layouts adapted to a phone.
+
+9.1 Navigation structure
+Role
+
+Main navigation items
+
+Student
+
+Dashboard, Weekly schedule, My request, Messages, Profile (Bale link)
+
+Professor / staff
+
+Dashboard, Weekly schedule, My slots, Assigned defenses, Messages, Profile (Bale link)
+
+Administrator
+
+Dashboard, Requests, Weekly schedule, Committees, Accounts
+
+9.2 Screens
+Screen
+
+Role
+
+Content
+
+Actions
+
+States to handle
+
+Login
+
+All
+
+Username, password, error message
+
+Log in
+
+Wrong credentials, inactive
+account, locked after repeated
+failures
+
+Thesis Defense Scheduling System | Complete Project Documentation (v2)
+
+Page 47
+
+Screen
+
+Role
+
+Content
+
+Actions
+
+States to handle
+
+Dashboard
+
+All
+
+Items needing attention: for a student the
+request status; for a professor assigned
+defenses awaiting an answer and recent
+cancellations; for the administrator the
+number of requests waiting
+
+Open the item
+
+Empty state when nothing
+waits
+
+Weekly
+schedule
+
+All
+
+Grid Saturday to Wednesday by hour 08:00
+to 17:00; each cell shows owner name and
+Single or Recurring; week navigation;
+legend; Download PDF button
+
+Change week,
+download PDF, open a
+cell for details
+
+No slots, loading, download
+error. Read-only for students
+
+Profile
+
+Student,
+Professor
+
+Name, role, Bale link status; button Link Bale
+account showing the code and instructions
+
+Request code, view
+status
+
+Expired code, already linked
+
+My request
+
+Student
+
+Optional note, thesis title and degree level
+(read-only); status and, once assigned, date,
+time and professor or committee; decision
+reason if declined
+
+Submit, cancel, track
+
+Active request exists; rejected
+or cancelled history
+
+Messages
+
+Student,
+Professor
+
+Thread of the confirmed session, input box
+
+Send message
+
+Disabled with an explanation
+when the session is not
+confirmed
+
+My slots
+
+Professor
+
+List of own and committee slots with type,
+pattern, times, validity; form to add a slot
+(owner, single or recurring, date or pattern,
+times)
+
+Add, withdraw
+
+Validation messages for
+window, overlap, membership
+
+Assigned
+defenses
+
+Professor
+
+List of pending seats with student, thesis
+title, date, time, note
+
+Approve, reject, cancel
+
+Already answered, cancelled
+in the meantime
+
+Requests
+
+Administrat
+or
+
+List of requests waiting, with thesis title,
+degree level, note, submission time; detail
+pane with the weekly grid beside it
+
+Assign (choose slot and
+date) or decline (enter
+reason)
+
+Occurrence taken, professor
+overlap, no free slot
+
+Committees
+
+Administrat
+or
+
+List of committees and members; form to
+create or edit
+
+Create, add or remove
+members, deactivate
+
+Duplicate name
+
+Accounts
+
+Administrat
+or
+
+Search list of users; create form (role,
+student or professor details)
+
+Create, deactivate,
+reactivate
+
+Duplicate username or student
+number
+
+9.3 The weekly schedule screen in detail
+The weekly schedule is the most visible new element, so it is specified separately. The grid has five columns
+(Saturday, Sunday, Monday, Tuesday, Wednesday) and one row per hour from 08:00 to 17:00. A slot occupies the
+rows between its start and end times. When several owners are available at the same time, their blocks are shown
+side by side or stacked inside the cell, so that no information is hidden.
+Element
+
+Specification
+
+Cell content
+
+Owner name (professor full name or committee name) and a label: Single or Recurring. Recurring slots may
+add the pattern in short form (odd days, even days, weekly).
+
+Visual distinction
+
+Single and recurring slots use different colors and also different text labels, so the distinction does not depend
+on color alone.
+
+Week navigation
+
+Previous week, next week and a date picker; the title shows the date range of the week in the chosen
+calendar.
+
+Calendar display
+
+Gregorian by default; Jalali display can be switched on; storage is always the same.
+
+Filters
+
+Optional filter by professor or committee name to help the administrator and students find a person.
+
+PDF
+
+Landscape page with the same grid, title, week range and generation time. The PDF has the same content as
+the screen.
+
+Phone layout
+
+On a small screen the grid is shown one day at a time with day tabs, listing the blocks of that day in time
+order.
+
+Empty and error states
+
+A message when the week has no slots; a retry option on loading failure.
+
+Student behavior
+
+Cells are not selectable; there is no button to pick a professor. The page explains that the administration
+assigns defenses.
+
+Thesis Defense Scheduling System | Complete Project Documentation (v2)
+
+Page 48
+
+9.4 The request and assignment flow on screen
+The student opens My request, optionally writes a note and presses Submit. The page immediately shows the
+status "requested" and explains that the administration will assign a date. The administrator sees the new request
+in the Requests list. After choosing the request, the administrator reviews the weekly grid next to the request
+details, selects one slot cell and one concrete date from that slot's occurrences, and confirms. The screen shows
+the professors who will be asked to approve. Professors see the defense in Assigned defenses and answer with
+one tap. As soon as the last professor approves, the student sees "confirmed" together with the date, time and
+professor or committee name, and receives the Bale message.
+
+9.5 Usability and accessibility principles
+• Right-to-left layout for Persian and left-to-right for English, with the same components.
+• Plain language for statuses: requested (waiting for assignment), assigned (waiting for professors), confirmed,
+rejected, cancelled.
+
+• Every error says what to do next, for example "This date is already taken, choose another date."
+• Text size and contrast follow common accessibility guidance; all actions are available from the keyboard on the
+web.
+
+• Destructive actions (cancel, decline, withdraw) ask for confirmation.
+• Forms keep the entered values after a validation error.
+
+10. Security and Privacy
+10.1 Authentication and sessions
+Passwords are never stored in readable form; the system keeps a salted hash produced by a modern algorithm.
+Login returns a short-lived access token and a longer-lived refresh token. Failed logins are rate limited, and
+repeated failures lock the account for a short time. Deactivated accounts are rejected at login and their tokens are
+refused on every call. Logout invalidates the refresh token.
+
+10.2 Authorization matrix
+Action
+
+Student
+
+Professor / staff
+
+Administrator
+
+Log in, view own profile
+
+Yes
+
+Yes
+
+Yes
+
+Create or deactivate accounts
+
+No
+
+No
+
+Yes
+
+Create or change committees
+
+No
+
+No
+
+Yes
+
+Define or withdraw own slots
+
+No
+
+Yes
+
+No
+
+Define slots for a committee
+
+No
+
+Only if a member
+
+No
+
+View weekly schedule and PDF
+
+Yes (read-only)
+
+Yes
+
+Yes
+
+Submit a request
+
+Yes
+
+No
+
+No
+
+See requests waiting for assignment
+
+Own only
+
+No
+
+Yes
+
+Assign or decline a request
+
+No
+
+No
+
+Yes
+
+Approve or reject a seat
+
+No
+
+Only own seat
+
+No
+
+Cancel a defense
+
+Own session
+
+Sessions where assigned
+
+No (cancellation is by the
+parties)
+
+Send and read messages
+
+Own confirmed session
+
+Confirmed sessions where
+assigned
+
+No
+
+Thesis Defense Scheduling System | Complete Project Documentation (v2)
+
+Page 49
+
+Action
+
+Student
+
+Professor / staff
+
+Administrator
+
+Link a Bale account
+
+Yes
+
+Yes
+
+Optional
+
+The administrator has no cancel or message rights in this version, consistent with the confirmed model. If the
+administration needs to cancel on behalf of the parties, this can be added as a controlled exception.
+
+10.3 Threats and countermeasures
+Threat
+
+Countermeasure
+
+Password guessing
+
+Hashing, rate limiting, temporary lock, optional strong-password policy.
+
+Stolen token
+
+Short token lifetime, HTTPS only, refresh token rotation, logout invalidation.
+
+Access to other users' data
+
+Server-side ownership and role checks on every endpoint; tests for each row of the
+matrix.
+
+SQL injection
+
+Parameterized queries through the data access layer.
+
+Cross-site scripting
+
+Output encoding; message and note text is escaped; content security policy.
+
+Cross-site request forgery
+
+Token-based API with explicit headers; same-site cookies if cookies are used.
+
+Double booking by concurrent requests
+
+Partial unique index on active sessions (slot, date) and transactional assignment.
+
+Abuse of the Bale link code
+
+Short expiry, single use, rate limit, code tied to the logged-in user.
+
+Forged Bale webhook calls
+
+Secret token check and source validation; unknown updates ignored.
+
+Leakage of the bot token
+
+Stored only in server configuration or a secret store, never in the repository or in clients.
+
+Data loss
+
+Daily backups, tested restore, migrations reviewed before release.
+
+Insider misuse
+
+Audit data (who assigned, answered, cancelled and when); administrator accounts kept
+few and named.
+
+10.4 Privacy
+The system stores only data needed for scheduling: identity and role, student number, thesis title, availability,
+request and decision history, messages and a Bale chat id. The chat id is used only for sending the two kinds of
+notification and is never shown to other users. A user may unlink Bale at any time, after which the notification
+status becomes skipped. Messages are visible only to the participants of the session. Deactivated accounts keep
+their history for audit but cannot log in. Retention follows the university's rules; a default of keeping defense history
+for several years and then archiving is suggested.
+
+11. Bale Notification Integration
+11.1 Why Bale and what changes from email
+The supervisor asked for notifications to be delivered through a bot on the Bale messenger instead of email,
+because students and professors read the messenger more reliably than email. The system therefore needs three
+things: a way to know which Bale chat belongs to which user (linking), a way to send messages (the gateway), and
+a record of what was sent (the notification log). All other notices remain inside the application.
+
+11.2 Setup
+Step
+
+Description
+
+Owner
+
+1
+
+Create the bot with Bale's bot administration facility and obtain the bot token.
+
+Project owner
+
+2
+
+Store the token as a secret in the server configuration.
+
+Developer
+
+3
+
+Choose the update method: webhook (recommended, the bot sends updates to the server) or polling
+(simpler for development).
+
+Developer
+
+Thesis Defense Scheduling System | Complete Project Documentation (v2)
+
+Page 50
+
+Step
+
+Description
+
+Owner
+
+4
+
+Register the webhook address and the secret token, if the webhook method is used.
+
+Developer
+
+5
+
+Publish the bot name to users in the application's profile page instructions.
+
+Administrator
+
+The exact method names and limits must be confirmed against Bale's current bot documentation before
+implementation. The design assumes a Telegram-style interface: send a text message to a chat id, and receive
+updates that contain the sender's chat id and text.
+
+11.3 Account linking flow
+Step
+
+Actor
+
+Action
+
+1
+
+User
+
+Opens Profile and presses Link Bale account.
+
+2
+
+System
+
+Creates a random one-time code, stores it with an expiry (for example 10 minutes), shows it
+with instructions.
+
+3
+
+User
+
+Opens the bot in Bale and sends the code.
+
+4
+
+Bale Platform
+
+Delivers the update to the system with the chat id and the code.
+
+5
+
+System
+
+Finds the user with that unexpired code, saves bale_chat_id and the link time, clears the code.
+
+6
+
+System
+
+Replies in Bale with a confirmation, and the application shows "linked".
+
+7
+
+System (failure)
+
+If the code is wrong or expired, the bot replies with a short error and the user can request a new
+code.
+
+11.4 Message types and templates
+Messages are short, factual and contain no sensitive detail beyond what the recipient needs. Templates use
+placeholders in braces. A Persian version of each template is prepared at implementation time.
+Type
+
+Recipient
+
+Trigger
+
+Template (English)
+
+Outcome: confirmed
+
+Student and each
+professor
+
+Last seat approved
+
+Your thesis defense is confirmed: {date}, {startTime} to
+{endTime}, {ownerName}.
+
+Outcome: rejected by a
+professor
+
+Student and
+professors
+
+A seat rejected
+
+The defense request could not be confirmed because a
+professor rejected it. You may submit a new request.
+
+Outcome: declined by
+the administrator
+
+Student
+
+Administrator declines
+
+Your defense request was declined. Reason: {reason}.
+
+Reminder
+
+Student and each
+professor
+
+Daily run, session dated
+tomorrow
+
+Reminder: the thesis defense of {studentName} is
+tomorrow, {date}, {startTime} to {endTime}.
+
+11.5 Sending, retries and logging
+Topic
+
+Rule
+
+Queueing
+
+Decision services create notification records with status pending; the notification module sends them. This
+keeps a Bale failure from affecting the decision.
+
+Uniqueness
+
+One record per session, recipient and type; creating a duplicate has no effect.
+
+Unlinked users
+
+The record is stored with status skipped.
+
+Success
+
+Status sent and sentAt recorded.
+
+Failure
+
+Status failed and the error stored in failureReason.
+
+Retry
+
+Failed records are retried at each daily run and also every few minutes for outcome messages; after a limited
+number of attempts they stay failed and appear in an administrator report.
+
+Rate limits
+
+Sending respects Bale's limits by spacing messages; reminders for one day are sent in a small batch.
+
+Timing of reminders
+
+The daily job runs in the morning (assumed 09:00 Tehran time) for sessions dated the next day.
+
+Testing
+
+A stub gateway replaces Bale in automated tests; a test bot is used in the staging environment.
+
+Thesis Defense Scheduling System | Complete Project Documentation (v2)
+
+Page 51
+
+12. Testing and Quality Assurance
+12.1 Strategy
+Level
+
+Scope
+
+Tools and approach
+
+Unit tests
+
+Date logic (recurrence expansion), validation rules,
+status transitions
+
+Automated tests of pure functions and domain
+classes.
+
+Service tests
+
+Each service module against a test database
+
+Automated; one suite per DFD process.
+
+API tests
+
+Every endpoint of section 8 with each role
+
+Automated; checks status codes, errors and the
+authorization matrix.
+
+Integration tests
+
+Notification module with a stub Bale gateway; PDF
+output
+
+Automated; checks records and files.
+
+End-to-end tests
+
+Main scenarios through the web interface
+
+Automated browser tests for the happy path and key
+failures.
+
+Concurrency tests
+
+Two simultaneous assignments of the same
+occurrence
+
+Parallel requests; exactly one must succeed.
+
+Performance tests
+
+Grid and PDF with many slots
+
+Generated data sets.
+
+Security tests
+
+Authorization matrix, injection and token handling
+
+Automated checks and a manual review.
+
+User acceptance tests
+
+Real students, professors and administrators
+
+Scripted scenarios on the staging environment.
+
+12.2 Key test cases
+ID
+
+Scenario
+
+Expected result
+
+T01
+
+Login with valid and invalid credentials, and with a deactivated
+account
+
+Success only for the first case; others refused (FR-01,
+FR-05)
+
+T02
+
+Define a single slot on Thursday
+
+Refused: outside Saturday to Wednesday (FR-13)
+
+T03
+
+Define a slot from 07:30 to 09:00
+
+Refused: before 08:00 (FR-13)
+
+T04
+
+Define two overlapping slots for one professor
+
+Second refused (FR-14)
+
+T05
+
+Odd-days slot, validity two weeks
+
+Grid shows it on Saturday, Monday and Wednesday of
+both weeks only (FR-11)
+
+T06
+
+Even-days slot
+
+Grid shows Sunday and Tuesday only (FR-11)
+
+T07
+
+Weekly slot on Monday
+
+Grid shows Monday only (FR-11)
+
+T08
+
+Professor defines a slot for a committee they do not belong to
+
+403 (FR-12)
+
+T09
+
+Withdraw a slot
+
+Disappears from the grid, remains in the database
+(FR-15)
+
+T10
+
+Open the schedule as a student
+
+Cells not selectable, no professor choice (FR-20)
+
+T11
+
+Download PDF
+
+PDF content matches the grid of the same week (FR-18)
+
+T12
+
+Student submits a request twice
+
+Second refused with RULE_VIOLATION (FR-22)
+
+T13
+
+Administrator assigns an occurrence already used by an active
+session
+
+409 CONFLICT (FR-26)
+
+T14
+
+Two administrators assign the same occurrence at the same time
+
+Exactly one succeeds (NFR-05)
+
+T15
+
+Assign a committee slot with three members
+
+Three pending seats created (FR-28)
+
+T16
+
+Professor assigned to two overlapping sessions
+
+Second assignment refused (FR-27)
+
+T17
+
+Administrator declines without a reason
+
+Refused: reason required (FR-29)
+
+T18
+
+Two of three professors approve
+
+Session remains assigned (FR-32)
+
+T19
+
+Third professor approves
+
+Session confirmed (FR-32)
+
+T20
+
+One professor rejects
+
+Session rejected; date available again (FR-33)
+
+Thesis Defense Scheduling System | Complete Project Documentation (v2)
+
+Page 52
+
+ID
+
+Scenario
+
+Expected result
+
+T21
+
+Cancel a confirmed session
+
+Cancelled; date available; others informed (FR-34,
+FR-35)
+
+T22
+
+Cancel a rejected session
+
+Refused (FR-34)
+
+T23
+
+Send a message before confirmation
+
+Refused (FR-38)
+
+T24
+
+Send a message as a non-member
+
+Refused (FR-38)
+
+T25
+
+Link Bale with a valid code
+
+chat id stored, code cleared (FR-06)
+
+T26
+
+Link Bale with an expired code
+
+Refused (FR-07)
+
+T27
+
+Final approval with a linked student
+
+Notification record sent within one minute (FR-39)
+
+T28
+
+Daily job twice on the same day
+
+No duplicate reminders (FR-41)
+
+T29
+
+Reminder for an unlinked professor
+
+Record status skipped (FR-42)
+
+T30
+
+Bale gateway returns an error
+
+Record failed; scheduling unaffected; retried later (FR-43,
+NFR-12)
+
+T31
+
+Student calls an administrator endpoint
+
+403 (NFR-04)
+
+T32
+
+Load: 500 slots, 300 users
+
+Grid under 2 seconds (NFR-01, NFR-02)
+
+12.3 Acceptance and release criteria
+• All Must requirements pass their tests; no open defect of high severity.
+• The authorization matrix is fully covered by API tests.
+• User acceptance test completed on staging with at least one administrator, two professors and three students.
+• Backup and restore drill completed.
+• The Bale integration works with the real bot in staging.
+
+13. Deployment and Operations
+13.1 Environments
+Environment
+
+Purpose
+
+Data
+
+Development
+
+Daily work by the developer
+
+Synthetic data; stub Bale gateway
+
+Staging
+
+Integration, user acceptance tests, shared with the Android
+developer
+
+Anonymized or synthetic data; test Bale
+bot
+
+Production
+
+Real use by the university
+
+Real data; production Bale bot
+
+13.2 Configuration
+Setting
+
+Meaning
+
+DATABASE_URL
+
+Database connection.
+
+JWT_SECRET and token lifetimes
+
+Signing key and lifetimes of access and refresh tokens.
+
+BALE_BOT_TOKEN
+
+Bot token (secret).
+
+BALE_WEBHOOK_SECRET
+
+Secret checked on incoming webhook calls.
+
+TIMEZONE
+
+Asia/Tehran.
+
+REMINDER_TIME
+
+Time of the daily reminder run (assumed 09:00).
+
+LINK_CODE_TTL_MINUTES
+
+Lifetime of a Bale link code.
+
+SCHEDULE_START and SCHEDULE_END
+
+08:00 and 17:00; WORKING_DAYS Saturday to Wednesday.
+
+Thesis Defense Scheduling System | Complete Project Documentation (v2)
+
+Page 53
+
+13.3 Release process
+• Source code in a version-controlled repository with a protected main branch.
+• Automated pipeline: install, lint, unit and API tests, build.
+• Database changes only through reviewed migrations; each migration is tested on staging first.
+• Deployment to staging on every merge; deployment to production after acceptance, outside peak hours.
+• Rollback plan: keep the previous build and a pre-release backup; migrations are written to be reversible where
+possible.
+
+13.4 Monitoring and maintenance
+Area
+
+Practice
+
+Logging
+
+Structured logs of requests, errors and job runs without passwords or tokens.
+
+Monitoring
+
+Uptime check, error-rate alert, alert when the daily job does not run or many notifications fail.
+
+Backups
+
+Daily database backup, kept for a defined period, restore tested.
+
+Admin report
+
+A page listing failed notifications and users without a Bale link.
+
+Updates
+
+Regular dependency and security updates; schema evolution through migrations.
+
+Support
+
+A contact route for users; guide for linking Bale; short user guides per role.
+
+Data lifecycle
+
+Archive old defense records after the retention period.
+
+14. Project Plan
+14.1 Phases and deliverables
+The plan follows the order the project has already taken: analysis and design are complete in this document; the
+remaining phases are the API and interface, implementation, testing and deployment. Durations are indicative
+estimates for one web developer working with the Android partner and should be adjusted after the first phase.
+Phase
+
+Work
+
+Main deliverables
+
+Indicative duration
+
+0. Analysis and design
+
+Brief analysis, version 1 and version 2
+design
+
+ERD, DFD, swimlane and UML
+specifications (this document); diagram
+images to be redrawn
+
+Done (images pending)
+
+1. API contract and data
+model
+
+Freeze the API of section 8; create the
+database schema and migrations
+
+API specification, schema, seed data
+
+1 week
+
+2. Interface design
+
+Screen designs per role, weekly grid
+design, Persian and English texts
+
+Screen designs, text catalogue
+
+1 week
+
+3. Core back end
+
+Accounts, committees, slots, schedule
+and PDF
+
+Services of processes 1.0 to 3.0 with
+tests
+
+2 weeks
+
+4. Workflow back end
+
+Requests, assignment, responses,
+cancellation, messaging
+
+Services of processes 4.0 to 8.0 with
+tests
+
+2 weeks
+
+5. Bale integration
+
+Bot, linking, notification log, daily job
+
+Process 9.0 with stub and real bot
+
+1 week
+
+6. Web client
+
+All screens of section 9
+
+Working web application
+
+3 weeks, partly parallel to
+phases 3 to 5
+
+7. Android client (partner)
+
+Same screens on the shared API
+
+Android application
+
+In parallel from phase 3
+
+8. Integration and testing
+
+Full test suite, security review, user
+acceptance
+
+Test report, defect list
+
+1 to 2 weeks
+
+9. Deployment and
+handover
+
+Production setup, backup, monitoring,
+user guides
+
+Running system, guides
+
+1 week
+
+Thesis Defense Scheduling System | Complete Project Documentation (v2)
+
+Page 54
+
+14.2 Milestones
+Milestone
+
+Condition
+
+M1 Design approved
+
+Documents reviewed by the supervisor; open questions in section 16 answered.
+
+M2 API frozen
+
+Section 8 agreed with the Android developer.
+
+M3 Scheduling core working
+
+Slots and weekly grid usable end to end.
+
+M4 Workflow complete
+
+A request can pass from submission to confirmation and cancellation.
+
+M5 Notifications live
+
+Outcome and reminder messages arrive through Bale in staging.
+
+M6 Acceptance passed
+
+User acceptance tests passed on staging.
+
+M7 Go-live
+
+Production deployment and handover.
+
+14.3 Roles and responsibilities
+Role
+
+Person or group
+
+Responsibility
+
+Project owner and web developer
+
+The author
+
+Design, API, back end, web client, Bale integration,
+deployment.
+
+Android developer
+
+Project partner
+
+Android client on the shared API; joint API review.
+
+Supervisor
+
+University
+
+Requirements, approval of changes, acceptance.
+
+Administrator users
+
+Higher Education Department
+
+Acceptance testing, committee definitions, daily use.
+
+14.4 Next steps
+• Answer the open questions in section 16.
+• Redraw the ERD, DFD, swimlane and UML diagrams for version 2 from the specifications in this document.
+• Freeze the API contract with the Android developer.
+• Prepare screen designs for the three roles, starting with the weekly schedule and the administrator's Requests
+screen.
+
+• Start the core back end.
+
+15. Risk Management
+ID
+
+Risk
+
+Likelihood
+
+Impact
+
+Mitigation
+
+R1
+
+Requirements change again during
+development
+
+Medium
+
+Medium
+
+Keep the design modular; record changes with a version
+log as in this document.
+
+R2
+
+Bale bot API differs from the assumed
+interface
+
+Medium
+
+High
+
+Confirm documentation early; isolate Bale code in one
+gateway; use a stub.
+
+R3
+
+Users do not link their Bale accounts
+
+High
+
+Medium
+
+Clear instructions, reminders in the app, admin report of
+unlinked users, in-app statuses always available.
+
+R4
+
+Interpretation of odd and even days
+differs from the university's
+
+Low
+
+Medium
+
+Confirmed weekday-based reading; recurrence logic
+isolated and tested so it can change quickly.
+
+R5
+
+Double booking through concurrent
+actions
+
+Low
+
+High
+
+Database unique index and transactions; concurrency
+test.
+
+R6
+
+Administrator becomes a bottleneck
+
+Medium
+
+Medium
+
+Efficient request list, filters, schedule beside the request;
+possible future suggestions.
+
+R7
+
+Professors do not respond to assigned
+defenses
+
+Medium
+
+Medium
+
+Reminders of pending seats in the app; possible future
+escalation rule.
+
+R8
+
+Android and web clients diverge
+
+Medium
+
+Medium
+
+Single API contract; no business logic in clients; shared
+test scenarios.
+
+R9
+
+Limited time for one developer
+
+Medium
+
+High
+
+Prioritize Must requirements; plan parallel work with the
+partner; avoid extra features.
+
+Thesis Defense Scheduling System | Complete Project Documentation (v2)
+
+Page 55
+
+ID
+
+Risk
+
+Likelihood
+
+Impact
+
+Mitigation
+
+R10
+
+Data loss or security incident
+
+Low
+
+High
+
+Backups, restore drill, security measures of section 10.
+
+R11
+
+Bale outage on the day of reminders
+
+Low
+
+Medium
+
+Retries, failure report, in-app visibility of the defense.
+
+16. Open Questions and Future Work
+16.1 Questions for the supervisor
+#
+
+Question
+
+Current assumption
+
+Q1
+
+After a rejection, should the administrator be able to reassign the same
+request instead of the student submitting a new one?
+
+The student submits a new request (assumption
+A3 of section 1).
+
+Q2
+
+May the administrator cancel a defense on behalf of the parties?
+
+No; only the student or an assigned professor can
+cancel.
+
+Q3
+
+At what time should reminders be sent?
+
+Morning, 09:00 Tehran time, for the next day.
+
+Q4
+
+Must a user be required to link Bale before submitting or answering?
+
+No; unlinked users are skipped.
+
+Q5
+
+Should the student see which professors are assigned before
+confirmation?
+
+Yes, after assignment.
+
+Q6
+
+How long must defense history be kept?
+
+Several years, then archived.
+
+Q7
+
+Who may create committee slots: any member or only the administrator?
+
+Any member (assumption A5).
+
+Q8
+
+Should the grid show already booked occurrences?
+
+Not in this version; occupancy is checked at
+assignment.
+
+16.2 Possible future enhancements
+• Suggestions to the administrator: the system proposes slots that fit a request and workload balance.
+• Show booked occurrences on the grid and per-professor workload reports.
+• Calendar export (iCalendar) for confirmed defenses.
+• Room booking and room names on the schedule.
+• Additional notification channels if the university requires them.
+• Reassignment after rejection and an escalation rule for unanswered seats.
+• Statistics for the department: number of defenses per period, average time from request to confirmation.
+
+17. Glossary
+Term
+
+Meaning
+
+Availability slot
+
+A published time block owned by a professor or a committee, either single (one date) or
+recurring.
+
+Occurrence
+
+One concrete date of a slot; the unit that can be booked.
+
+Single slot
+
+A slot that applies to one date only.
+
+Recurring slot
+
+A slot that repeats by odd days, even days or weekly within a validity range.
+
+Odd days / even days
+
+Weekdays counted from Saturday: odd are Saturday, Monday, Wednesday; even are Sunday,
+Tuesday.
+
+Committee
+
+A named standing group of professors that can own slots and attend defenses together.
+
+Defense session
+
+One student's defense request and its life cycle.
+
+Seat (participant)
+
+One professor's place in a session, with their own answer.
+
+Requested / assigned / confirmed /
+rejected / cancelled
+
+The statuses of a session.
+
+Weekly grid
+
+The Saturday to Wednesday, 08:00 to 17:00 view generated from slots.
+
+Thesis Defense Scheduling System | Complete Project Documentation (v2)
+
+Page 56
+
+Term
+
+Meaning
+
+Bale
+
+The messenger platform used for notifications through a bot.
+
+Link code
+
+A one-time code a user sends to the bot to connect a Bale account.
+
+Notification
+
+A logged Bale message, either an outcome or a reminder.
+
+ERD / DFD / UML
+
+Entity-relationship, data flow and unified modeling language diagrams.
+
+Swimlane
+
+A flow diagram divided into lanes by actor.
+
+API
+
+The programming interface through which clients use the back-end.
+
+17.1 Document history and deliverables
+Item
+
+Description
+
+Version 1 design
+
+ERD, DFD, swimlane (with diagrams and Word descriptions) for the original brief.
+
+Version 2 changes
+
+Admin-assigned scheduling, committee and recurring slots, weekly grid, Bale notifications.
+
+Design documents, Parts 1 and 2
+
+Text and tables for ERD, DFD, swimlane and UML of version 2.
+
+This document
+
+Complete project documentation from introduction to plan, combining the design with
+requirements, architecture, API, interface, security, integration, testing, operations, plan and
+risks.
+
+Pending
+
+Redrawn diagram images for version 2.
+
+End of document.
+
+Thesis Defense Scheduling System | Complete Project Documentation (v2)
+
+Page 57
+
+

@@ -1,0 +1,564 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "version": "2.0.0",
+    "title": "Thesis Defense Scheduling System API",
+    "description": "Shared REST API for Thesis Defense Scheduling Web & Android Clients"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "schemas": {
+      "LoginRequest": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 50,
+            "pattern": "^[a-zA-Z0-9._-]+$"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8
+          }
+        },
+        "required": [
+          "username",
+          "password"
+        ]
+      },
+      "CreateUserRequest": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 50,
+            "pattern": "^[a-zA-Z0-9._-]+$"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8
+          },
+          "full_name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 120
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "email"
+              },
+              {
+                "type": "string",
+                "enum": [
+                  ""
+                ]
+              }
+            ]
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "student",
+              "professor",
+              "higher_education_staff",
+              "admin"
+            ]
+          },
+          "student_number": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9]{4,20}$"
+          },
+          "degree_level": {
+            "type": "string",
+            "enum": [
+              "master",
+              "phd"
+            ]
+          },
+          "thesis_title": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 300
+          },
+          "department": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "academic_title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 60
+          },
+          "office_location": {
+            "type": "string",
+            "maxLength": 100
+          }
+        },
+        "required": [
+          "username",
+          "password",
+          "full_name",
+          "role"
+        ]
+      },
+      "CreateSlotRequest": {
+        "type": "object",
+        "properties": {
+          "owner_type": {
+            "type": "string",
+            "enum": [
+              "professor",
+              "committee"
+            ]
+          },
+          "committee_id": {
+            "type": "integer"
+          },
+          "slot_type": {
+            "type": "string",
+            "enum": [
+              "single",
+              "recurring"
+            ]
+          },
+          "slot_date": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "recurrence_pattern": {
+            "type": "string",
+            "enum": [
+              "odd_days",
+              "even_days",
+              "weekly"
+            ]
+          },
+          "weekday": {
+            "type": "string",
+            "enum": [
+              "sat",
+              "sun",
+              "mon",
+              "tue",
+              "wed"
+            ]
+          },
+          "start_time": {
+            "type": "string",
+            "pattern": "^([0-1][0-9]|2[0-3]):[0-5][0-9]$"
+          },
+          "end_time": {
+            "type": "string",
+            "pattern": "^([0-1][0-9]|2[0-3]):[0-5][0-9]$"
+          },
+          "valid_from": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "valid_until": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          }
+        },
+        "required": [
+          "owner_type",
+          "slot_type",
+          "start_time",
+          "end_time"
+        ]
+      },
+      "CreateDefenseRequest": {
+        "type": "object",
+        "properties": {
+          "note": {
+            "type": "string",
+            "maxLength": 1000
+          }
+        }
+      },
+      "AssignRequest": {
+        "type": "object",
+        "properties": {
+          "slot_id": {
+            "type": "integer"
+          },
+          "scheduled_date": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          }
+        },
+        "required": [
+          "slot_id",
+          "scheduled_date"
+        ]
+      },
+      "DeclineRequest": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "reason"
+        ]
+      },
+      "SeatDecisionRequest": {
+        "type": "object",
+        "properties": {
+          "approve": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "approve"
+        ]
+      },
+      "CancelSessionRequest": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "maxLength": 500
+          }
+        }
+      },
+      "CreateMessageRequest": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "content"
+        ]
+      }
+    },
+    "parameters": {}
+  },
+  "paths": {
+    "/api/v1/auth/login": {
+      "post": {
+        "summary": "Log in with username and password",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful login, returns tokens and user info"
+          },
+          "401": {
+            "description": "Wrong credentials or deactivated account or lockout"
+          }
+        }
+      }
+    },
+    "/api/v1/auth/signup": {
+      "post": {
+        "summary": "User registration / sign up",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateUserRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Account created and logged in"
+          },
+          "409": {
+            "description": "Username or email or student number already exists"
+          }
+        }
+      }
+    },
+    "/api/v1/me": {
+      "get": {
+        "summary": "Current user profile and Bale link status",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Profile data"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          }
+        }
+      }
+    },
+    "/api/v1/me/bale/link-code": {
+      "post": {
+        "summary": "Request a one-time Bale link code",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Returns 8-character code and expiration"
+          }
+        }
+      }
+    },
+    "/api/v1/schedule": {
+      "get": {
+        "summary": "Get weekly schedule grid",
+        "parameters": [
+          {
+            "name": "week",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "2026-10-24"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Weekly schedule grid"
+          }
+        }
+      }
+    },
+    "/api/v1/schedule.pdf": {
+      "get": {
+        "summary": "Download weekly schedule grid as PDF",
+        "parameters": [
+          {
+            "name": "week",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "2026-10-24"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "PDF binary content"
+          }
+        }
+      }
+    },
+    "/api/v1/slots": {
+      "post": {
+        "summary": "Define a single or recurring availability slot",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSlotRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Slot created"
+          },
+          "409": {
+            "description": "Overlap with existing slot"
+          },
+          "422": {
+            "description": "Validation error"
+          }
+        }
+      }
+    },
+    "/api/v1/requests": {
+      "post": {
+        "summary": "Student submits a defense request",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateDefenseRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Defense request submitted"
+          },
+          "409": {
+            "description": "RULE_VIOLATION: active request already exists"
+          }
+        }
+      }
+    },
+    "/api/v1/requests/{id}/assign": {
+      "post": {
+        "summary": "Admin assigns request to slot and date",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Assigned"
+          },
+          "409": {
+            "description": "Occurrence taken or professor overlap"
+          }
+        }
+      }
+    },
+    "/api/v1/requests/{id}/decline": {
+      "post": {
+        "summary": "Admin declines request with reason",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeclineRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Declined"
+          }
+        }
+      }
+    },
+    "/api/v1/seats/{id}/decision": {
+      "post": {
+        "summary": "Professor approves or rejects assigned defense seat",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SeatDecisionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Decision recorded"
+          }
+        }
+      }
+    },
+    "/api/v1/sessions/{id}/cancel": {
+      "post": {
+        "summary": "Cancel assigned or confirmed defense session",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancelSessionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Cancelled"
+          }
+        }
+      }
+    },
+    "/api/v1/sessions/{id}/messages": {
+      "post": {
+        "summary": "Post message to confirmed session thread",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateMessageRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Message posted"
+          },
+          "409": {
+            "description": "Session not confirmed"
+          }
+        }
+      }
+    }
+  }
+}
