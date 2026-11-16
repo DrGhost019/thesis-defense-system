@@ -221,11 +221,7 @@ export function DatePicker({
     onChange("");
   };
 
-  const defaultPlaceholder =
-    placeholder ||
-    (activeMode === "jalali"
-      ? `${t.datepicker.selectDate} (${t.datepicker.solarHijriBadge})`
-      : `${t.datepicker.selectDate} (${t.datepicker.gregorianBadge})`);
+  const defaultPlaceholder = placeholder || t.datepicker.selectDate;
 
   return (
     <div ref={containerRef} className={`relative inline-block w-full ${className}`}>
@@ -274,20 +270,8 @@ export function DatePicker({
           )}
         </div>
 
-        <div className="flex items-center gap-1.5 shrink-0">
-          {/* Calendar Badge */}
-          <span
-            className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
-              activeMode === "jalali"
-                ? "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300"
-                : "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300"
-            }`}
-          >
-            {activeMode === "jalali" ? t.datepicker.solarHijriBadge : t.datepicker.gregorianBadge}
-          </span>
-
-          {/* Clear Button */}
-          {allowClear && !disabled && value && (
+        {allowClear && !disabled && value && (
+          <div className="flex items-center gap-1.5 shrink-0">
             <button
               type="button"
               onClick={handleClear}
@@ -296,8 +280,8 @@ export function DatePicker({
             >
               <X className="w-3.5 h-3.5" />
             </button>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       {/* Popover Dropdown */}
