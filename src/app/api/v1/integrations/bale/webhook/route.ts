@@ -5,18 +5,22 @@ import { apiSuccess, apiError } from "@/lib/api-response";
 import logger from "@/lib/logger";
 
 export async function POST(req: NextRequest) {
+  const isEn =
+    req.headers.get("accept-language")?.includes("en") ||
+    req.cookies.get("thesis_lang")?.value === "en";
+
   try {
     const secret = req.headers.get("x-bale-bot-api-secret-token") || req.nextUrl.searchParams.get("secret");
     const configuredSecret = process.env.BALE_WEBHOOK_SECRET;
 
     if (configuredSecret && secret !== configuredSecret) {
       logger.warn("Bale webhook: invalid secret token");
-      return apiError("FORBIDDEN", "توکن محرمانه نامعتبر است", 403);
+      return apiError("FORBIDDEN", isEn ? "Invalid secret token" : "توکن محرمانه نامعتبر است", 403);
     }
 
     const body = await req.json().catch(() => null);
     if (!body) {
-      return apiError("VALIDATION_ERROR", "بدنه درخواست نامعتبر است", 400);
+      return apiError("VALIDATION_ERROR", isEn ? "Invalid request body" : "بدنه درخواست نامعتبر است", 400);
     }
 
     logger.info({ body }, "Received Bale webhook update");
@@ -56,6 +60,6 @@ export async function POST(req: NextRequest) {
     }
   } catch (err: any) {
     logger.error({ err: err.message }, "Error processing Bale webhook");
-    return apiError("INTERNAL_ERROR", "خطا در پردازش وب‌هوک", 500);
+    return apiError("INTERNAL_ERROR", isEn ? "Error processing webhook" : "خطا در پردازش وب‌هوک", 500);
   }
 }

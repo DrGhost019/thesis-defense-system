@@ -75,7 +75,10 @@ export function ProfileView() {
     mutationFn: async ({ code, chatId }: { code: string; chatId: string }) => {
       const res = await fetch("/api/v1/integrations/bale/webhook", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Accept-Language": lang,
+        },
         body: JSON.stringify({
           update_id: Date.now(),
           message: {
@@ -96,9 +99,31 @@ export function ProfileView() {
             : "Webhook simulation succeeded: Bale account linked!"
         );
       } else {
+        let outputData = data;
+        if (lang === "en" && typeof data === "object" && data !== null) {
+          let localizedMessage = data.message;
+          let localizedReason = data.reason;
+
+          if (data.message === "توکن محرمانه نامعتبر است" || data.code === "FORBIDDEN") {
+            localizedMessage = "Invalid secret token";
+          } else if (data.message === "بدنه درخواست نامعتبر است") {
+            localizedMessage = "Invalid request body";
+          }
+
+          if (data.reason?.includes("کد اتصال نامعتبر یا منقضی شده است")) {
+            localizedReason = "Link code is invalid or expired";
+          }
+
+          outputData = {
+            ...data,
+            ...(localizedMessage ? { message: localizedMessage } : {}),
+            ...(localizedReason ? { reason: localizedReason } : {}),
+          };
+        }
+
         setWebhookMessage(
           `${lang === "fa" ? "پاسخ وب‌هوک:" : "Webhook response:"} ${
-            data.reason || JSON.stringify(data)
+            outputData.reason && !outputData.code ? outputData.reason : JSON.stringify(outputData)
           }`
         );
       }

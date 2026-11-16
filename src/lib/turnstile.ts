@@ -3,7 +3,8 @@
  */
 export async function verifyTurnstileToken(
   token: string | undefined | null,
-  remoteIp?: string
+  remoteIp?: string,
+  lang: "fa" | "en" = "fa"
 ): Promise<{ success: boolean; message?: string }> {
   const secretKey = process.env.TURNSTILE_SECRET_KEY;
 
@@ -16,7 +17,7 @@ export async function verifyTurnstileToken(
   if (!token || token.trim() === "") {
     return {
       success: false,
-      message: "تأیید کپچا الزامی است (CAPTCHA verification is required)",
+      message: lang === "en" ? "CAPTCHA verification is required" : "تأیید کپچا الزامی است",
     };
   }
 
@@ -46,15 +47,20 @@ export async function verifyTurnstileToken(
       return { success: true };
     }
 
-    const errorCodes = data["error-codes"] ? data["error-codes"].join(", ") : "invalid-token";
     return {
       success: false,
-      message: `اعتبارسنجی امنیتی کپچا ناموفق بود (${errorCodes})`,
+      message:
+        lang === "en"
+          ? "Security CAPTCHA verification failed"
+          : "اعتبارسنجی امنیتی کپچا ناموفق بود",
     };
   } catch (err: any) {
     return {
       success: false,
-      message: "خطا در ارتباط با سرور اعتبارسنجی کپچا",
+      message:
+        lang === "en"
+          ? "Error connecting to CAPTCHA verification service"
+          : "خطا در ارتباط با سرور اعتبارسنجی کپچا",
     };
   }
 }

@@ -18,7 +18,15 @@ export async function POST(req: NextRequest) {
       req.headers.get("x-real-ip") ||
       undefined;
 
-    const captchaVerification = await verifyTurnstileToken(parsed.data.captcha_token, clientIp);
+    const isEn =
+      req.headers.get("accept-language")?.includes("en") ||
+      req.cookies.get("thesis_lang")?.value === "en";
+
+    const captchaVerification = await verifyTurnstileToken(
+      parsed.data.captcha_token,
+      clientIp,
+      isEn ? "en" : "fa"
+    );
     if (!captchaVerification.success) {
       return apiError("VALIDATION_ERROR", captchaVerification.message!, 400);
     }
