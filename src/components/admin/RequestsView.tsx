@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "../providers";
 import { formatToJalali } from "@/lib/date-utils";
 import { getTranslations } from "@/lib/translations";
+import { DatePicker } from "@/components/ui/DatePicker";
 import {
   FileText,
   Calendar,
@@ -284,19 +285,11 @@ export function RequestsView() {
                     <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                       {t.adminRequests.selectDateLabel}
                     </label>
-                    <input
-                      type="date"
+                    <DatePicker
                       value={selectedDate}
-                      onChange={(e) => setSelectedDate(e.target.value)}
-                      className="w-full p-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                      onChange={setSelectedDate}
+                      required
                     />
-                    {selectedDate && (
-                      <span className="text-[10px] text-slate-400 block mt-1">
-                        {lang === "fa"
-                          ? `معادل شمسی: ${formatToJalali(selectedDate)}`
-                          : `Selected Gregorian: ${selectedDate}`}
-                      </span>
-                    )}
                   </div>
                 </div>
 

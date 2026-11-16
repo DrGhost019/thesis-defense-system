@@ -400,6 +400,32 @@ export const translations = {
       rateLimitNote: "نکته: جهت حفظ امنیت، صدور کد اتصال به ۳ بار در ساعت محدود شده است.",
       telegramIdLabel: "شناسه گفتگوی بله (Chat ID):",
     },
+
+    // DatePicker
+    datepicker: {
+      selectDate: "انتخاب تاریخ",
+      today: "امروز",
+      clear: "پاک کردن",
+      close: "بستن",
+      prevMonth: "ماه قبل",
+      nextMonth: "ماه بعد",
+      prevYear: "سال قبل",
+      nextYear: "سال بعد",
+      solarHijriBadge: "تقویم هجری شمسی",
+      gregorianBadge: "تقویم میلادی",
+      weekdays: ["ش", "ی", "د", "س", "چ", "پ", "ج"],
+      weekdaysFull: ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه", "چهارشنبه", "پنج‌شنبه", "جمعه"],
+      monthsJalali: [
+        "فروردین", "اردیبهشت", "خرداد", "تیر", "مرداد", "شهریور",
+        "مهر", "آبان", "آذر", "دی", "بهمن", "اسفند"
+      ],
+      monthsGregorian: [
+        "ژانویه", "فوریه", "مارس", "آوریل", "مه", "ژوئن",
+        "ژوئیه", "اوت", "سپتامبر", "اکتبر", "نوامبر", "دسامبر"
+      ],
+      selectYear: "انتخاب سال",
+      selectMonth: "انتخاب ماه",
+    },
   },
 
   en: {
@@ -800,6 +826,32 @@ export const translations = {
       unlinkBtn: "Unlink Bale Account",
       rateLimitNote: "Notice: To prevent abuse, code issuance is limited to at most 3 requests per hour.",
       telegramIdLabel: "Bale Chat ID:",
+    },
+
+    // DatePicker
+    datepicker: {
+      selectDate: "Select date",
+      today: "Today",
+      clear: "Clear",
+      close: "Close",
+      prevMonth: "Previous month",
+      nextMonth: "Next month",
+      prevYear: "Previous year",
+      nextYear: "Next year",
+      solarHijriBadge: "Solar Hijri Calendar",
+      gregorianBadge: "Gregorian Calendar",
+      weekdays: ["Sa", "Su", "Mo", "Tu", "We", "Th", "Fr"],
+      weekdaysFull: ["Saturday", "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+      monthsJalali: [
+        "Farvardin", "Ordibehesht", "Khordad", "Tir", "Mordad", "Shahrivar",
+        "Mehr", "Aban", "Azar", "Dey", "Bahman", "Esfand"
+      ],
+      monthsGregorian: [
+        "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December"
+      ],
+      selectYear: "Select year",
+      selectMonth: "Select month",
     },
   },
 } as const;

@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "../providers";
 import { formatToJalali } from "@/lib/date-utils";
 import { getTranslations } from "@/lib/translations";
+import { DatePicker } from "@/components/ui/DatePicker";
 import {
   Clock,
   Plus,
@@ -237,12 +238,10 @@ export function MySlotsView() {
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   {t.slots.singleDateLabel}
                 </label>
-                <input
-                  type="date"
+                <DatePicker
                   value={slotDate}
-                  onChange={(e) => setSlotDate(e.target.value)}
+                  onChange={setSlotDate}
                   required
-                  className="w-full p-2 text-xs sm:text-sm rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
                 />
               </div>
             ) : (
@@ -286,12 +285,10 @@ export function MySlotsView() {
                   <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                     {t.slots.validFromLabel}
                   </label>
-                  <input
-                    type="date"
+                  <DatePicker
                     value={validFrom}
-                    onChange={(e) => setValidFrom(e.target.value)}
+                    onChange={setValidFrom}
                     required
-                    className="w-full p-2 text-xs sm:text-sm rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
                   />
                 </div>
 
@@ -299,12 +296,11 @@ export function MySlotsView() {
                   <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                     {t.slots.validUntilLabel}
                   </label>
-                  <input
-                    type="date"
+                  <DatePicker
                     value={validUntil}
-                    onChange={(e) => setValidUntil(e.target.value)}
+                    onChange={setValidUntil}
+                    min={validFrom || undefined}
                     required
-                    className="w-full p-2 text-xs sm:text-sm rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
                   />
                 </div>
               </>

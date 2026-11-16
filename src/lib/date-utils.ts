@@ -1,4 +1,13 @@
-import { format as formatJalali, parse as parseJalali, newDate as newJalaliDate } from "date-fns-jalali";
+import {
+  format as formatJalali,
+  parse as parseJalali,
+  newDate as newJalaliDate,
+  getYear as getJalaliYear,
+  getMonth as getJalaliMonth,
+  getDate as getJalaliDate,
+  getDay as getJalaliDay,
+  getDaysInMonth as getJalaliDaysInMonth,
+} from "date-fns-jalali";
 import { format as formatGregorian, parseISO, startOfDay, addDays, getDay, isAfter, isBefore, isEqual } from "date-fns";
 import { Weekday, RecurrencePattern } from "@prisma/client";
 
@@ -296,3 +305,121 @@ export function formatToJalali(
     return toFarsi ? toPersianDigits(dateStr) : dateStr;
   }
 }
+
+/**
+ * Converts Jalali year, month (0-11), and day (1-31) to ISO string (YYYY-MM-DD)
+ */
+export function jalaliToIso(year: number, month: number, day: number): string {
+  const d = newJalaliDate(year, month, day);
+  return formatGregorian(d, "yyyy-MM-dd");
+}
+
+/**
+ * Converts an ISO string (YYYY-MM-DD) to Jalali components { year, month: 0..11, day: 1..31 }
+ */
+export function isoToJalali(isoStr: string): { year: number; month: number; day: number } {
+  const d = parseISO(isoStr);
+  return {
+    year: getJalaliYear(d),
+    month: getJalaliMonth(d),
+    day: getJalaliDate(d),
+  };
+}
+
+/**
+ * Returns today's components in Jalali and Gregorian
+ */
+export function getCalendarToday(): {
+  jalali: { year: number; month: number; day: number };
+  gregorian: { year: number; month: number; day: number };
+  iso: string;
+} {
+  const now = new Date();
+  const iso = formatGregorian(now, "yyyy-MM-dd");
+  return {
+    jalali: {
+      year: getJalaliYear(now),
+      month: getJalaliMonth(now),
+      day: getJalaliDate(now),
+    },
+    gregorian: {
+      year: now.getFullYear(),
+      month: now.getMonth(),
+      day: now.getDate(),
+    },
+    iso,
+  };
+}
+
+export interface CalendarDayCell {
+  dayNumber: number;
+  isoDate: string;
+  isWeekend: boolean; // Thursday (Thu=4) or Friday (Fri=5)
+  isWorkingDay: boolean;
+  dayOfWeek: number; // 0=Sun..6=Sat
+}
+
+/**
+ * Computes calendar grid metadata for a given Jalali year & month (0-11).
+ * Week starts on Saturday (column 0).
+ */
+export function getJalaliMonthGrid(year: number, month: number): {
+  startCol: number; // 0..6 (Saturday=0, Sunday=1, ..., Friday=6)
+  totalDays: number;
+  days: CalendarDayCell[];
+} {
+  const firstDay = newJalaliDate(year, month, 1);
+  const jsDay = getJalaliDay(firstDay); // 0=Sun..6=Sat
+  const startCol = (jsDay + 1) % 7; // Sat(6)->0, Sun(0)->1, ..., Fri(5)->6
+  const totalDays = getJalaliDaysInMonth(firstDay);
+
+  const days: CalendarDayCell[] = [];
+  for (let d = 1; d <= totalDays; d++) {
+    const dayDate = newJalaliDate(year, month, d);
+    const isoDate = formatGregorian(dayDate, "yyyy-MM-dd");
+    const dow = getJalaliDay(dayDate);
+    const isWeekend = dow === 4 || dow === 5; // Thu or Fri
+    days.push({
+      dayNumber: d,
+      isoDate,
+      isWeekend,
+      isWorkingDay: !isWeekend,
+      dayOfWeek: dow,
+    });
+  }
+
+  return { startCol, totalDays, days };
+}
+
+/**
+ * Computes calendar grid metadata for a given Gregorian year & month (0-11).
+ * Week starts on Saturday (column 0) to align with university system.
+ */
+export function getGregorianMonthGrid(year: number, month: number): {
+  startCol: number;
+  totalDays: number;
+  days: CalendarDayCell[];
+} {
+  const firstDay = new Date(year, month, 1);
+  const jsDay = firstDay.getDay(); // 0=Sun..6=Sat
+  const startCol = (jsDay + 1) % 7;
+  const totalDays = new Date(year, month + 1, 0).getDate();
+
+  const days: CalendarDayCell[] = [];
+  for (let d = 1; d <= totalDays; d++) {
+    const dayDate = new Date(year, month, d);
+    const isoDate = formatGregorian(dayDate, "yyyy-MM-dd");
+    const dow = dayDate.getDay();
+    const isWeekend = dow === 4 || dow === 5; // Thu or Fri in Iran schedule
+    days.push({
+      dayNumber: d,
+      isoDate,
+      isWeekend,
+      isWorkingDay: !isWeekend,
+      dayOfWeek: dow,
+    });
+  }
+
+  return { startCol, totalDays, days };
+}
+

@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "../providers";
 import { formatToJalali, getWeekSaturday, toTehranDateString } from "@/lib/date-utils";
 import { getTranslations } from "@/lib/translations";
+import { DatePicker } from "@/components/ui/DatePicker";
 import {
   Calendar,
   ChevronLeft,
@@ -83,6 +84,19 @@ export function WeeklyScheduleView() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          {/* Week Selector DatePicker */}
+          <div className="w-36 sm:w-44">
+            <DatePicker
+              value={currentWeekSaturday}
+              onChange={(dateStr) => {
+                if (dateStr) {
+                  setCurrentWeekSaturday(getWeekSaturday(dateStr));
+                }
+              }}
+              allowClear={false}
+            />
+          </div>
+
           {/* Week Navigation */}
           <div className="flex items-center bg-slate-100 dark:bg-slate-800 rounded-xl p-1 border border-slate-200 dark:border-slate-700">
             <button
