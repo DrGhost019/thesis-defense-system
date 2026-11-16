@@ -26,7 +26,7 @@ export function CommitteesView() {
   const [addMemberCommId, setAddMemberCommId] = useState<number | null>(null);
   const [addMemberProfId, setAddMemberProfId] = useState<string>("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [successKey, setSuccessKey] = useState<"created" | "memberAdded" | "memberRemoved" | null>(null);
 
   // Fetch committees
   const { data: commData, isLoading: commLoading } = useQuery({
@@ -60,7 +60,7 @@ export function CommitteesView() {
       return data;
     },
     onSuccess: () => {
-      setSuccessMessage(lang === "fa" ? "هیئت داوران با موفقیت ایجاد شد" : "Committee created successfully");
+      setSuccessKey("created");
       setErrorMessage(null);
       setIsCreateOpen(false);
       setNewCommitteeName("");
@@ -70,7 +70,7 @@ export function CommitteesView() {
     },
     onError: (err: any) => {
       setErrorMessage(err.message);
-      setSuccessMessage(null);
+      setSuccessKey(null);
     },
   });
 
@@ -92,7 +92,7 @@ export function CommitteesView() {
       return data;
     },
     onSuccess: () => {
-      setSuccessMessage(lang === "fa" ? "استاد با موفقیت به هیئت داوران افزوده شد" : "Faculty member added to committee");
+      setSuccessKey("memberAdded");
       setErrorMessage(null);
       setAddMemberCommId(null);
       setAddMemberProfId("");
@@ -100,6 +100,7 @@ export function CommitteesView() {
     },
     onError: (err: any) => {
       setErrorMessage(err.message);
+      setSuccessKey(null);
     },
   });
 
@@ -119,11 +120,13 @@ export function CommitteesView() {
       return data;
     },
     onSuccess: () => {
-      setSuccessMessage(lang === "fa" ? "عضو با موفقیت از هیئت داوران حذف شد" : "Member removed from committee");
+      setSuccessKey("memberRemoved");
+      setErrorMessage(null);
       queryClient.invalidateQueries({ queryKey: ["admin-committees"] });
     },
     onError: (err: any) => {
       setErrorMessage(err.message);
+      setSuccessKey(null);
     },
   });
 
@@ -170,7 +173,7 @@ export function CommitteesView() {
           onClick={() => {
             setIsCreateOpen(!isCreateOpen);
             setErrorMessage(null);
-            setSuccessMessage(null);
+            setSuccessKey(null);
           }}
           className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs sm:text-sm font-bold transition shadow-sm"
         >
@@ -179,10 +182,18 @@ export function CommitteesView() {
         </button>
       </div>
 
-      {successMessage && (
+      {successKey && (
         <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 text-xs sm:text-sm flex items-center gap-2">
           <CheckCircle className="w-5 h-5 flex-shrink-0 text-emerald-600" />
-          <span>{successMessage}</span>
+          <span>
+            {successKey === "created"
+              ? t.committees.createdSuccess
+              : successKey === "memberAdded"
+              ? t.committees.memberAddedSuccess
+              : successKey === "memberRemoved"
+              ? t.committees.memberRemovedSuccess
+              : t.common.success}
+          </span>
         </div>
       )}
 
@@ -261,11 +272,11 @@ export function CommitteesView() {
               type="button"
               onClick={() => {
                 if (!newCommitteeName.trim()) {
-                  setErrorMessage(lang === "fa" ? "نام هیئت داوران را وارد کنید" : "Please enter committee name");
+                  setErrorMessage(t.committees.nameRequiredError);
                   return;
                 }
                 if (selectedProfIds.length === 0) {
-                  setErrorMessage(lang === "fa" ? "حداقل یک استاد را انتخاب کنید" : "Please select at least one faculty member");
+                  setErrorMessage(t.committees.memberRequiredError);
                   return;
                 }
                 createMutation.mutate({

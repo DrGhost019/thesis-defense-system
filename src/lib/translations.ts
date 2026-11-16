@@ -315,6 +315,11 @@ export const translations = {
       toggleStatus: "تغییر وضعیت فعال/غیرفعال",
       noCommittees: "هیچ کمیته داوری تعریف نشده است.",
       membersList: "اعضای هیئت داوران:",
+      createdSuccess: "هیئت داوران با موفقیت ایجاد شد",
+      memberAddedSuccess: "استاد با موفقیت به هیئت داوران افزوده شد",
+      memberRemovedSuccess: "عضو با موفقیت از هیئت داوران حذف شد",
+      nameRequiredError: "نام هیئت داوران را وارد کنید",
+      memberRequiredError: "حداقل یک استاد را انتخاب کنید",
     },
 
     // Admin Accounts View
@@ -339,6 +344,9 @@ export const translations = {
       statusCol: "وضعیت حساب",
       actionsCol: "عملیات",
       deactivateConfirm: "آیا از تغییر وضعیت این کاربر مطمئن هستید؟",
+      userCreatedSuccess: "کاربر با موفقیت ایجاد شد",
+      statusActiveSuccess: "حساب کاربری فعال شد",
+      statusInactiveSuccess: "حساب کاربری غیرفعال شد",
     },
 
     // Admin Reports View
@@ -742,6 +750,11 @@ export const translations = {
       toggleStatus: "Toggle Status",
       noCommittees: "No evaluation committees defined.",
       membersList: "Committee Faculty Members:",
+      createdSuccess: "Committee created successfully",
+      memberAddedSuccess: "Faculty member added to committee",
+      memberRemovedSuccess: "Member removed from committee",
+      nameRequiredError: "Please enter committee name",
+      memberRequiredError: "Please select at least one faculty member",
     },
 
     // Admin Accounts View
@@ -766,6 +779,9 @@ export const translations = {
       statusCol: "Account Status",
       actionsCol: "Actions",
       deactivateConfirm: "Are you sure you want to toggle this account's status?",
+      userCreatedSuccess: "User created successfully",
+      statusActiveSuccess: "User account activated successfully",
+      statusInactiveSuccess: "User account deactivated successfully",
     },
 
     // Admin Reports View

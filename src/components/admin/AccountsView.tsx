@@ -62,7 +62,7 @@ export function AccountsView() {
       return resData;
     },
     onSuccess: () => {
-      setSuccessMessage(lang === "fa" ? "کاربر با موفقیت ایجاد شد" : "User created successfully");
+      setSuccessMessage(t.accounts.userCreatedSuccess);
       setErrorMessage(null);
       setIsCreateOpen(false);
       setFormUsername("");
@@ -87,10 +87,12 @@ export function AccountsView() {
       });
       const resData = await res.json();
       if (!res.ok) throw new Error(resData.message || "Failed to update status");
-      return resData;
+      return { resData, is_active };
     },
-    onSuccess: (resData) => {
-      setSuccessMessage(resData.message);
+    onSuccess: ({ is_active }) => {
+      setSuccessMessage(
+        is_active ? t.accounts.statusActiveSuccess : t.accounts.statusInactiveSuccess
+      );
       queryClient.invalidateQueries({ queryKey: ["admin-users"] });
     },
   });

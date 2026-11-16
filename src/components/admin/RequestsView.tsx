@@ -67,8 +67,12 @@ export function RequestsView() {
       if (!res.ok) throw new Error(data.message || "Failed to assign slot");
       return data;
     },
-    onSuccess: (data) => {
-      setSuccessMessage(data.message || (lang === "fa" ? "جلسه با موفقیت تخصیص یافت" : "Session assigned successfully"));
+    onSuccess: () => {
+      setSuccessMessage(
+        lang === "fa"
+          ? "جلسه دفاع با موفقیت به بازه انتخابی تخصیص یافت و برای داوران ارسال گردید"
+          : "Defense session assigned successfully and sent to examiners"
+      );
       setErrorMessage(null);
       setSelectedSession(null);
       setSelectedSlotId("");
