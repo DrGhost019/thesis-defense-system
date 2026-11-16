@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "../providers";
 import { getTranslations } from "@/lib/translations";
@@ -11,6 +11,7 @@ import {
   CheckCircle,
   AlertCircle,
   Loader2,
+  X,
 } from "lucide-react";
 
 export function AccountsView() {
@@ -23,7 +24,37 @@ export function AccountsView() {
   const [page, setPage] = useState(1);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [successKey, setSuccessKey] = useState<"created" | "activated" | "deactivated" | null>(null);
+
+  // Auto-dismiss banners after 5 seconds (Requirement 1)
+  useEffect(() => {
+    if (successKey) {
+      const timer = setTimeout(() => {
+        setSuccessKey(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [successKey]);
+
+  useEffect(() => {
+    if (errorMessage) {
+      const timer = setTimeout(() => {
+        setErrorMessage(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [errorMessage]);
+
+  const parseErrorMessage = (err: any): string => {
+    const raw = err?.message || "";
+    if (raw.includes("تکراری") || raw.includes("already exists") || raw.includes("CONFLICT")) {
+      return lang === "fa" ? "نام کاربری یا اطلاعات کاربری تکراری است" : "A user with this username or information already exists";
+    }
+    if (raw.includes("شماره دانشجویی") || raw.includes("student number")) {
+      return lang === "fa" ? "شماره دانشجویی قبلاً در سیستم ثبت شده است" : "Student number already exists in the system";
+    }
+    return raw || t.common.error;
+  };
 
   // New account form state
   const [formRole, setFormRole] = useState<"student" | "professor" | "higher_education_staff" | "admin">("student");
@@ -62,19 +93,25 @@ export function AccountsView() {
       return resData;
     },
     onSuccess: () => {
-      setSuccessMessage(t.accounts.userCreatedSuccess);
+      setSuccessKey("created");
       setErrorMessage(null);
       setIsCreateOpen(false);
       setFormUsername("");
       setFormPassword("");
       setFormFullName("");
       setFormEmail("");
+      setFormStudentNumber("");
+      setFormThesisTitle("");
+      setFormDepartment("");
+      setFormAcademicTitle("");
+      setFormOfficeLocation("");
       queryClient.invalidateQueries({ queryKey: ["admin-users"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-counts"] });
     },
     onError: (err: any) => {
-      setErrorMessage(err.message);
-      setSuccessMessage(null);
+      setErrorMessage(parseErrorMessage(err));
+      setSuccessKey(null);
     },
   });
 
@@ -90,10 +127,15 @@ export function AccountsView() {
       return { resData, is_active };
     },
     onSuccess: ({ is_active }) => {
-      setSuccessMessage(
-        is_active ? t.accounts.statusActiveSuccess : t.accounts.statusInactiveSuccess
-      );
+      setSuccessKey(is_active ? "activated" : "deactivated");
+      setErrorMessage(null);
       queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-counts"] });
+    },
+    onError: (err: any) => {
+      setErrorMessage(parseErrorMessage(err));
+      setSuccessKey(null);
     },
   });
 
@@ -141,26 +183,50 @@ export function AccountsView() {
           onClick={() => {
             setIsCreateOpen(!isCreateOpen);
             setErrorMessage(null);
-            setSuccessMessage(null);
+            setSuccessKey(null);
           }}
           className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs sm:text-sm font-bold transition shadow-sm"
         >
           <Plus className="w-4 h-4" />
-          <span>{isCreateOpen ? t.slots.closeFormBtn : lang === "fa" ? "تعریف کاربر جدید" : "New User"}</span>
+          <span>{isCreateOpen ? t.slots.closeFormBtn : t.accounts.newUserBtn}</span>
         </button>
       </div>
 
-      {successMessage && (
-        <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 text-xs sm:text-sm flex items-center gap-2">
-          <CheckCircle className="w-5 h-5 flex-shrink-0 text-emerald-600" />
-          <span>{successMessage}</span>
+      {successKey && (
+        <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 text-xs sm:text-sm flex items-center justify-between gap-2 animate-in fade-in">
+          <div className="flex items-center gap-2">
+            <CheckCircle className="w-5 h-5 flex-shrink-0 text-emerald-600" />
+            <span>
+              {successKey === "created"
+                ? t.accounts.userCreatedSuccess
+                : successKey === "activated"
+                ? t.accounts.statusActiveSuccess
+                : successKey === "deactivated"
+                ? t.accounts.statusInactiveSuccess
+                : t.common.success}
+            </span>
+          </div>
+          <button
+            onClick={() => setSuccessKey(null)}
+            className="text-emerald-600 hover:text-emerald-900 dark:text-emerald-400 dark:hover:text-emerald-200 p-1"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
       )}
 
       {errorMessage && (
-        <div className="p-4 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-xs sm:text-sm flex items-center gap-2">
-          <AlertCircle className="w-5 h-5 flex-shrink-0 text-red-600" />
-          <span>{errorMessage}</span>
+        <div className="p-4 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-xs sm:text-sm flex items-center justify-between gap-2 animate-in fade-in">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-5 h-5 flex-shrink-0 text-red-600" />
+            <span>{errorMessage}</span>
+          </div>
+          <button
+            onClick={() => setErrorMessage(null)}
+            className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-200 p-1"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
       )}
 
@@ -171,7 +237,7 @@ export function AccountsView() {
           className="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-blue-200 dark:border-blue-800 shadow-lg space-y-4 animate-in fade-in"
         >
           <h3 className="text-sm font-bold text-slate-900 dark:text-white border-b border-slate-100 dark:border-slate-800 pb-3">
-            {lang === "fa" ? "ثبت مشخصات کاربر جدید" : "Create New User Account"}
+            {t.accounts.formTitle}
           </h3>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
@@ -187,7 +253,7 @@ export function AccountsView() {
                 <option value="student">{t.accounts.roleFilterStudent}</option>
                 <option value="professor">{t.accounts.roleFilterProf}</option>
                 <option value="higher_education_staff">
-                  {lang === "fa" ? "کارشناس آموزش (Staff)" : "Academic Staff"}
+                  {t.accounts.staffRoleLabel}
                 </option>
                 <option value="admin">{t.accounts.roleFilterAdmin}</option>
               </select>
@@ -202,7 +268,7 @@ export function AccountsView() {
                 value={formFullName}
                 onChange={(e) => setFormFullName(e.target.value)}
                 required
-                placeholder="Dr. John Doe"
+                placeholder={t.accounts.fullNamePlaceholder}
                 className="w-full p-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
               />
             </div>
@@ -216,7 +282,7 @@ export function AccountsView() {
                 value={formUsername}
                 onChange={(e) => setFormUsername(e.target.value)}
                 required
-                placeholder="j.doe"
+                placeholder={t.accounts.usernamePlaceholder}
                 className="w-full p-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
                 dir="ltr"
               />
@@ -232,7 +298,7 @@ export function AccountsView() {
                 onChange={(e) => setFormPassword(e.target.value)}
                 required
                 minLength={8}
-                placeholder="••••••••"
+                placeholder={t.accounts.passwordPlaceholder}
                 className="w-full p-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
                 dir="ltr"
               />
@@ -246,7 +312,7 @@ export function AccountsView() {
                 type="email"
                 value={formEmail}
                 onChange={(e) => setFormEmail(e.target.value)}
-                placeholder="user@uni.ac.ir"
+                placeholder={t.accounts.emailPlaceholder}
                 className="w-full p-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
                 dir="ltr"
               />
@@ -263,7 +329,7 @@ export function AccountsView() {
                     value={formStudentNumber}
                     onChange={(e) => setFormStudentNumber(e.target.value)}
                     required
-                    placeholder="40123456"
+                    placeholder={t.accounts.studentNumberPlaceholder}
                     className="w-full p-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
                     dir="ltr"
                   />
@@ -290,7 +356,7 @@ export function AccountsView() {
                     value={formThesisTitle}
                     onChange={(e) => setFormThesisTitle(e.target.value)}
                     required
-                    placeholder="Thesis title..."
+                    placeholder={t.accounts.thesisTitlePlaceholder}
                     className="w-full p-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
                   />
                 </div>
@@ -299,39 +365,39 @@ export function AccountsView() {
               <>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    {lang === "fa" ? "دانشکده / گروه" : "Department"}
+                    {t.accounts.departmentLabel}
                   </label>
                   <input
                     type="text"
                     value={formDepartment}
                     onChange={(e) => setFormDepartment(e.target.value)}
                     required
-                    placeholder="Computer Engineering"
+                    placeholder={t.accounts.departmentPlaceholder}
                     className="w-full p-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
                   />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    {lang === "fa" ? "مرتبه علمی" : "Academic Title"}
+                    {t.accounts.academicTitleLabel}
                   </label>
                   <input
                     type="text"
                     value={formAcademicTitle}
                     onChange={(e) => setFormAcademicTitle(e.target.value)}
                     required
-                    placeholder="Associate Professor"
+                    placeholder={t.accounts.academicTitlePlaceholder}
                     className="w-full p-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
                   />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    {lang === "fa" ? "دفتر / محل کار" : "Office"}
+                    {t.accounts.officeLocationLabel}
                   </label>
                   <input
                     type="text"
                     value={formOfficeLocation}
                     onChange={(e) => setFormOfficeLocation(e.target.value)}
-                    placeholder="Room 302"
+                    placeholder={t.accounts.officeLocationPlaceholder}
                     className="w-full p-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
                   />
                 </div>

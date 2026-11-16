@@ -187,8 +187,8 @@ export class DashboardService {
       const [pendingRequestsCount, totalStudents, totalProfessors, totalCommittees, unlinkedUsersCount, failedNotificationsCount] =
         await Promise.all([
           prisma.defenseSession.count({ where: { status: "requested" } }),
-          prisma.student.count(),
-          prisma.professor.count(),
+          prisma.student.count({ where: { user: { is_active: true } } }),
+          prisma.professor.count({ where: { user: { is_active: true } } }),
           prisma.committee.count({ where: { is_active: true } }),
           prisma.user.count({ where: { bale_chat_id: null, is_active: true } }),
           prisma.notification.count({ where: { status: "failed" } }),
