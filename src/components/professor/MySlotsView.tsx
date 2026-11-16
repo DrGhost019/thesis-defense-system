@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "../providers";
 import { formatToJalali } from "@/lib/date-utils";
@@ -13,6 +13,7 @@ import {
   AlertCircle,
   CheckCircle,
   Loader2,
+  X,
 } from "lucide-react";
 
 export function MySlotsView() {
@@ -22,7 +23,100 @@ export function MySlotsView() {
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [successKey, setSuccessKey] = useState<"created" | "withdrawn" | null>(null);
+
+  // Auto-dismiss notification banners after 5 seconds
+  useEffect(() => {
+    if (successKey) {
+      const timer = setTimeout(() => {
+        setSuccessKey(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [successKey]);
+
+  useEffect(() => {
+    if (errorMessage) {
+      const timer = setTimeout(() => {
+        setErrorMessage(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [errorMessage]);
+
+  const parseErrorMessage = (err: any): string => {
+    const raw = typeof err === "string" ? err : err?.message || "";
+
+    if (
+      raw.includes("هم‌پوشانی") ||
+      raw.includes("SLOT_OVERLAP") ||
+      raw.includes("overlap") ||
+      raw.includes("CONFLICT")
+    ) {
+      return t.slots.overlapError;
+    }
+    if (
+      raw.includes("روزهای کاری") ||
+      raw.includes("working day") ||
+      raw.includes("شنبه تا چهارشنبه")
+    ) {
+      return t.slots.workingDayError;
+    }
+    if (raw.includes("قبل از ساعت ۰۸:۰۰") || raw.includes("before 08:00")) {
+      return t.slots.startTimeMinError;
+    }
+    if (raw.includes("بعد از ساعت ۱۷:۰۰") || raw.includes("after 17:00")) {
+      return t.slots.endTimeMaxError;
+    }
+    if (raw.includes("گام‌های ۱۵ دقیقه‌ای") || raw.includes("15-minute")) {
+      return t.slots.timeStepError;
+    }
+    if (raw.includes("بعد از زمان شروع") || raw.includes("after start time")) {
+      return t.slots.timeOrderError;
+    }
+    if (raw.includes("حداقل ۳۰ دقیقه") || raw.includes("at least 30 minutes")) {
+      return t.slots.minDurationError;
+    }
+    if (raw.includes("بیشتر از ۴ ساعت") || raw.includes("exceed 4 hours")) {
+      return t.slots.maxDurationError;
+    }
+    if (raw.includes("در گذشته") || raw.includes("in the past")) {
+      return t.slots.pastDateError;
+    }
+    if (
+      raw.includes("عضو این هیئت") ||
+      raw.includes("هیئت غیرفعال") ||
+      raw.includes("not a member")
+    ) {
+      return t.slots.notCommitteeMemberError;
+    }
+    if (raw.includes("الزامی") || raw.includes("required")) {
+      return t.slots.requiredFieldsError;
+    }
+    if (raw.includes("قبل از تاریخ شروع") || raw.includes("before start date")) {
+      return t.slots.invalidDateRangeError;
+    }
+    if (raw.includes("هیچ روز کاری") || raw.includes("no working days")) {
+      return t.slots.noMatchingDaysError;
+    }
+    if (raw.includes("یافت نشد") || raw.includes("NOT_FOUND") || raw.includes("not found")) {
+      return t.slots.slotNotFoundError;
+    }
+    if (
+      raw.includes("اجازه") ||
+      raw.includes("FORBIDDEN") ||
+      raw.includes("authorized") ||
+      raw.includes("فقط اساتید")
+    ) {
+      return t.slots.withdrawForbiddenError;
+    }
+
+    if (lang === "en" && /[\u0600-\u06FF]/.test(raw)) {
+      return t.slots.genericError;
+    }
+
+    return raw || t.slots.genericError;
+  };
 
   // Form state
   const [ownerType, setOwnerType] = useState<"professor" | "committee">("professor");
@@ -68,15 +162,15 @@ export function MySlotsView() {
       return data;
     },
     onSuccess: () => {
-      setSuccessMessage(lang === "fa" ? "بازه زمانی با موفقیت ثبت شد" : "Availability slot created successfully");
+      setSuccessKey("created");
       setErrorMessage(null);
       setIsFormOpen(false);
       queryClient.invalidateQueries({ queryKey: ["my-slots"] });
       queryClient.invalidateQueries({ queryKey: ["schedule"] });
     },
     onError: (err: any) => {
-      setErrorMessage(err.message);
-      setSuccessMessage(null);
+      setErrorMessage(parseErrorMessage(err));
+      setSuccessKey(null);
     },
   });
 
@@ -90,12 +184,14 @@ export function MySlotsView() {
       return data;
     },
     onSuccess: () => {
-      setSuccessMessage(lang === "fa" ? "بازه با موفقیت لغو شد" : "Slot successfully withdrawn");
+      setSuccessKey("withdrawn");
+      setErrorMessage(null);
       queryClient.invalidateQueries({ queryKey: ["my-slots"] });
       queryClient.invalidateQueries({ queryKey: ["schedule"] });
     },
     onError: (err: any) => {
-      setErrorMessage(err.message);
+      setErrorMessage(parseErrorMessage(err));
+      setSuccessKey(null);
     },
   });
 
@@ -146,7 +242,7 @@ export function MySlotsView() {
           onClick={() => {
             setIsFormOpen(!isFormOpen);
             setErrorMessage(null);
-            setSuccessMessage(null);
+            setSuccessKey(null);
           }}
           className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs sm:text-sm font-bold transition shadow-sm"
         >
@@ -155,17 +251,41 @@ export function MySlotsView() {
         </button>
       </div>
 
-      {successMessage && (
-        <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 text-xs sm:text-sm flex items-center gap-2">
-          <CheckCircle className="w-5 h-5 flex-shrink-0 text-emerald-600" />
-          <span>{successMessage}</span>
+      {successKey && (
+        <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 text-xs sm:text-sm flex items-center justify-between gap-2 animate-in fade-in">
+          <div className="flex items-center gap-2">
+            <CheckCircle className="w-5 h-5 flex-shrink-0 text-emerald-600" />
+            <span>
+              {successKey === "created"
+                ? t.slots.createSuccess
+                : successKey === "withdrawn"
+                ? t.slots.withdrawSuccess
+                : t.common.success}
+            </span>
+          </div>
+          <button
+            onClick={() => setSuccessKey(null)}
+            className="text-emerald-600 hover:text-emerald-900 dark:text-emerald-400 dark:hover:text-emerald-200 p-1"
+            title={t.datepicker.close}
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
       )}
 
       {errorMessage && (
-        <div className="p-4 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-xs sm:text-sm flex items-center gap-2">
-          <AlertCircle className="w-5 h-5 flex-shrink-0 text-red-600" />
-          <span>{errorMessage}</span>
+        <div className="p-4 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-xs sm:text-sm flex items-center justify-between gap-2 animate-in fade-in">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-5 h-5 flex-shrink-0 text-red-600" />
+            <span>{errorMessage}</span>
+          </div>
+          <button
+            onClick={() => setErrorMessage(null)}
+            className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-200 p-1"
+            title={t.datepicker.close}
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
       )}
 
@@ -439,13 +559,7 @@ export function MySlotsView() {
 
                   <button
                     onClick={() => {
-                      if (
-                        confirm(
-                          lang === "fa"
-                            ? "آیا از لغو این بازه زمانی مطمئن هستید؟ بازه از جدول حذف خواهد شد."
-                            : "Are you sure you want to withdraw this availability slot?"
-                        )
-                      ) {
+                      if (confirm(t.slots.confirmWithdraw)) {
                         withdrawSlotMutation.mutate(slot.slot_id);
                       }
                     }}
