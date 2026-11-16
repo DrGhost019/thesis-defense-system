@@ -20,11 +20,15 @@ import {
   Globe,
   CheckCircle2,
 } from "lucide-react";
+import { TurnstileWidget, TurnstileWidgetHandle } from "./TurnstileWidget";
+
 export function AuthPage() {
   const { login, lang, setLang, theme, toggleTheme } = useAuth();
   const [serverError, setServerError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const [selectedAccount, setSelectedAccount] = useState<string | null>(null);
+  const turnstileRef = useRef<TurnstileWidgetHandle>(null);
 
   // Login form
   const loginForm = useForm({
@@ -108,17 +112,31 @@ export function AuthPage() {
       return;
     }
 
+    if (process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY && !captchaToken) {
+      setServerError(
+        lang === "fa"
+          ? "لطفاً ابتدا تأیید امنیتی کپچا را انجام دهید."
+          : "Please complete the security CAPTCHA verification before signing in."
+      );
+      return;
+    }
+
     setServerError(null);
     setIsSubmitting(true);
     try {
       const res = await fetch("/api/v1/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(values),
+        body: JSON.stringify({
+          ...values,
+          captcha_token: captchaToken,
+        }),
       });
 
       const data = await res.json();
       if (!res.ok) {
+        turnstileRef.current?.reset();
+        setCaptchaToken(null);
         setServerError(
           data.message ||
             (lang === "fa"
@@ -255,12 +273,42 @@ export function AuthPage() {
               </div>
             </div>
 
-            {/* 2. Sign In Button */}
+            {/* 2. CAPTCHA Verification & Sign In Button */}
             <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
+              <div className="relative">
+                <TurnstileWidget
+                  ref={turnstileRef}
+                  theme={theme}
+                  lang={lang}
+                  onVerify={(token) => {
+                    setCaptchaToken(token);
+                    setServerError(null);
+                  }}
+                  onExpire={() => {
+                    setCaptchaToken(null);
+                  }}
+                  onError={(err) => {
+                    console.warn("Turnstile error:", err);
+                    setCaptchaToken(null);
+                  }}
+                />
+
+                {captchaToken && (
+                  <div className="flex items-center justify-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400 mt-1 animate-in fade-in">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                    <span>
+                      {lang === "fa"
+                        ? "تأیید امنیتی با موفقیت انجام شد"
+                        : "Security verification completed"}
+                    </span>
+                  </div>
+                )}
+              </div>
+
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full py-2.5 px-4 rounded-xl text-white font-bold bg-blue-600 hover:bg-blue-700 active:scale-[0.98] transition shadow-md shadow-blue-500/20 disabled:opacity-60 text-xs sm:text-sm flex items-center justify-center gap-2 mt-1"
+                className="w-full py-2.5 px-4 rounded-xl text-white font-bold bg-blue-600 hover:bg-blue-700 active:scale-[0.98] transition shadow-md shadow-blue-500/20 disabled:opacity-60 text-xs sm:text-sm flex items-center justify-center gap-2 mt-3"
               >
                 {isSubmitting ? (
                   <span>{lang === "fa" ? "در حال احراز هویت..." : "Authenticating..."}</span>

@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { AuthService } from "@/services/AuthService";
 import { LoginSchema } from "@/lib/validations";
 import { apiSuccess, apiError, handleZodError } from "@/lib/api-response";
+import { verifyTurnstileToken } from "@/lib/turnstile";
 
 export async function POST(req: NextRequest) {
   try {
@@ -9,6 +10,17 @@ export async function POST(req: NextRequest) {
     const parsed = LoginSchema.safeParse(body);
     if (!parsed.success) {
       return handleZodError(parsed.error);
+    }
+
+    // Verify Cloudflare Turnstile CAPTCHA
+    const clientIp =
+      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      req.headers.get("x-real-ip") ||
+      undefined;
+
+    const captchaVerification = await verifyTurnstileToken(parsed.data.captcha_token, clientIp);
+    if (!captchaVerification.success) {
+      return apiError("VALIDATION_ERROR", captchaVerification.message!, 400);
     }
 
     const result = await AuthService.authenticate(parsed.data.username, parsed.data.password);
