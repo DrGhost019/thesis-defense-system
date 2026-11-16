@@ -9,6 +9,8 @@ import {
 } from "@/lib/date-utils";
 import { chromium } from "playwright";
 import logger from "@/lib/logger";
+import fs from "fs";
+import path from "path";
 
 export interface ScheduleBlock {
   slot_id: number;
@@ -153,6 +155,26 @@ export class ScheduleService {
     const jalaliWeekStart = formatToJalali(schedule.week_start_saturday);
     const jalaliWeekEnd = formatToJalali(schedule.week_end_wednesday);
 
+    const logoPath = path.join(process.cwd(), "public/assets/uni.png");
+    let logoBase64 = "";
+    try {
+      if (fs.existsSync(logoPath)) {
+        logoBase64 = `data:image/png;base64,${fs.readFileSync(logoPath).toString("base64")}`;
+      }
+    } catch {
+      // fallback
+    }
+
+    const fontPath = path.join(process.cwd(), "public/fonts/Vazirmatn-VariableFont_wght.ttf");
+    let fontBase64 = "";
+    try {
+      if (fs.existsSync(fontPath)) {
+        fontBase64 = `data:font/truetype;charset=utf-8;base64,${fs.readFileSync(fontPath).toString("base64")}`;
+      }
+    } catch {
+      // fallback
+    }
+
     // Build standalone HTML for Playwright rendering
     const html = `<!DOCTYPE html>
 <html lang="fa" dir="rtl">
@@ -160,9 +182,13 @@ export class ScheduleService {
   <meta charset="UTF-8">
   <title>برنامه هفتگی حضور اساتید و دفاع پایان‌نامه</title>
   <style>
-    @font-face {
+    ${
+      fontBase64
+        ? `@font-face {
       font-family: 'Vazirmatn';
-      src: url('http://localhost:3000/fonts/Vazirmatn-VariableFont_wght.ttf') format('truetype');
+      src: url('${fontBase64}') format('truetype');
+    }`
+        : ""
     }
     body {
       font-family: 'Vazirmatn', sans-serif;
@@ -284,7 +310,7 @@ export class ScheduleService {
 <body>
   <div class="header">
     <div class="logo-title">
-      <img class="logo-img" src="http://localhost:3000/assets/uni.png" alt="University Logo" />
+      ${logoBase64 ? `<img class="logo-img" src="${logoBase64}" alt="University Logo" />` : ""}
       <div class="header-text">
         <h1>سامانه زمان‌بندی جلسات دفاع پایان‌نامه</h1>
         <p>برنامه هفتگی حضور اساتید و هیئت‌های داوران</p>

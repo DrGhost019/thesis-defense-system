@@ -26,7 +26,11 @@ pnpm-debug.log*
 *.log
 
 # Runtime generated artifacts / tests
-test-schedule.pdf
+test-schedule*.pdf
+
+# Local Embedded Database
+/.pgdata/
+/.pgsql/
 
 # Editor & OS files
 .DS_Store
