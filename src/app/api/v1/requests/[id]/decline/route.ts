@@ -5,17 +5,35 @@ import { DeclineRequestSchema } from "@/lib/validations";
 import { apiSuccess, apiError, handleZodError } from "@/lib/api-response";
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+  const isEn =
+    req.headers.get("accept-language")?.startsWith("en") ||
+    req.nextUrl.searchParams.get("lang") === "en";
+
   const authUser = await getAuthenticatedUser(req);
   if (!authUser) {
-    return apiError("UNAUTHENTICATED", "ابتدا وارد سیستم شوید", 401);
+    return apiError(
+      "UNAUTHENTICATED",
+      isEn ? "Please authenticate first" : "ابتدا وارد سیستم شوید",
+      401
+    );
   }
   if (!hasRole(authUser, ["admin"])) {
-    return apiError("FORBIDDEN", "تنها آموزش مجاز به رد درخواست دفاع است", 403);
+    return apiError(
+      "FORBIDDEN",
+      isEn
+        ? "Only academic administrators can decline defense requests"
+        : "تنها آموزش مجاز به رد درخواست دفاع است",
+      403
+    );
   }
 
   const sessionId = parseInt(params.id, 10);
   if (isNaN(sessionId)) {
-    return apiError("VALIDATION_ERROR", "شناسه جلسه نامعتبر است", 422);
+    return apiError(
+      "VALIDATION_ERROR",
+      isEn ? "Invalid defense session ID" : "شناسه جلسه نامعتبر است",
+      422
+    );
   }
 
   try {
@@ -31,10 +49,16 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     }
 
     return apiSuccess({
-      message: "درخواست دفاع با موفقیت رد شد و به دانشجو اطلاع‌رسانی گردید",
+      message: isEn
+        ? "Defense request declined and student notified"
+        : "درخواست دفاع با موفقیت رد شد و به دانشجو اطلاع‌رسانی گردید",
       session: result.session,
     });
   } catch {
-    return apiError("INTERNAL_ERROR", "خطا در رد درخواست دفاع", 500);
+    return apiError(
+      "INTERNAL_ERROR",
+      isEn ? "Internal error declining defense request" : "خطا در رد درخواست دفاع",
+      500
+    );
   }
 }

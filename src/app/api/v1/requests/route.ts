@@ -6,12 +6,26 @@ import { CreateRequestSchema, PaginationSchema } from "@/lib/validations";
 import { apiSuccess, apiError, handleZodError } from "@/lib/api-response";
 
 export async function POST(req: NextRequest) {
+  const isEn =
+    req.headers.get("accept-language")?.startsWith("en") ||
+    req.nextUrl.searchParams.get("lang") === "en";
+
   const authUser = await getAuthenticatedUser(req);
   if (!authUser) {
-    return apiError("UNAUTHENTICATED", "ابتدا وارد سیستم شوید", 401);
+    return apiError(
+      "UNAUTHENTICATED",
+      isEn ? "Please authenticate first" : "ابتدا وارد سیستم شوید",
+      401
+    );
   }
   if (authUser.role !== "student") {
-    return apiError("FORBIDDEN", "تنها دانشجویان مجاز به ثبت درخواست دفاع هستند", 403);
+    return apiError(
+      "FORBIDDEN",
+      isEn
+        ? "Only students are authorized to submit defense requests"
+        : "تنها دانشجویان مجاز به ثبت درخواست دفاع هستند",
+      403
+    );
   }
 
   try {
@@ -28,17 +42,33 @@ export async function POST(req: NextRequest) {
 
     return apiSuccess(result.session, 201);
   } catch {
-    return apiError("INTERNAL_ERROR", "خطا در ثبت درخواست دفاع", 500);
+    return apiError(
+      "INTERNAL_ERROR",
+      isEn ? "Internal error submitting defense request" : "خطا در ثبت درخواست دفاع",
+      500
+    );
   }
 }
 
 export async function GET(req: NextRequest) {
+  const isEn =
+    req.headers.get("accept-language")?.startsWith("en") ||
+    req.nextUrl.searchParams.get("lang") === "en";
+
   const authUser = await getAuthenticatedUser(req);
   if (!authUser) {
-    return apiError("UNAUTHENTICATED", "ابتدا وارد سیستم شوید", 401);
+    return apiError(
+      "UNAUTHENTICATED",
+      isEn ? "Please authenticate first" : "ابتدا وارد سیستم شوید",
+      401
+    );
   }
   if (!hasRole(authUser, ["admin"])) {
-    return apiError("FORBIDDEN", "دسترسی مجاز نمی‌باشد", 403);
+    return apiError(
+      "FORBIDDEN",
+      isEn ? "Access forbidden" : "دسترسی مجاز نمی‌باشد",
+      403
+    );
   }
 
   const { searchParams } = new URL(req.url);

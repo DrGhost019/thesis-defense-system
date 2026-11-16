@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/components/providers";
 import { AuthPage } from "@/components/auth/AuthPage";
@@ -23,6 +23,13 @@ export default function HomePage() {
   const { user, isLoading, lang } = useAuth();
   const [activeTab, setActiveTab] = useState<TabId>("dashboard");
   const [selectedSessionIdForChat, setSelectedSessionIdForChat] = useState<number | undefined>(undefined);
+
+  // Requirement 5: Ensure that when a user logs in, they are immediately directed to the dashboard
+  useEffect(() => {
+    if (user?.userId) {
+      setActiveTab("dashboard");
+    }
+  }, [user?.userId]);
 
   // Fetch dashboard summary for badge counts
   const { data: dashboardData } = useQuery({

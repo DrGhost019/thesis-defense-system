@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "../providers";
 import { getTranslations } from "@/lib/translations";
@@ -16,6 +16,7 @@ import {
   AlertCircle,
   Smartphone,
   ExternalLink,
+  X,
 } from "lucide-react";
 
 export function ProfileView() {
@@ -26,6 +27,15 @@ export function ProfileView() {
   const [copied, setCopied] = useState(false);
   const [testChatId, setTestChatId] = useState("12345678");
   const [webhookMessage, setWebhookMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (webhookMessage) {
+      const timer = setTimeout(() => {
+        setWebhookMessage(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [webhookMessage]);
 
   const { data: baleData, refetch: refetchBale } = useQuery({
     queryKey: ["bale-status"],
@@ -444,9 +454,16 @@ export function ProfileView() {
                     </button>
                   </div>
                   {webhookMessage && (
-                    <p className="text-xs text-blue-700 dark:text-blue-300 font-medium">
-                      {webhookMessage}
-                    </p>
+                    <div className="p-3 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-200 text-xs flex items-center justify-between gap-2 animate-in fade-in">
+                      <span className="font-medium">{webhookMessage}</span>
+                      <button
+                        type="button"
+                        onClick={() => setWebhookMessage(null)}
+                        className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-200 p-0.5"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   )}
                 </div>
               </div>

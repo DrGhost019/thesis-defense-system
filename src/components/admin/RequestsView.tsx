@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "../providers";
 import { formatToJalali } from "@/lib/date-utils";
@@ -13,6 +13,7 @@ import {
   AlertTriangle,
   CheckCircle,
   Loader2,
+  X,
 } from "lucide-react";
 
 export function RequestsView() {
@@ -27,6 +28,60 @@ export function RequestsView() {
   const [declineReason, setDeclineReason] = useState<string>("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  // Auto-dismiss notifications after 5 seconds
+  useEffect(() => {
+    if (successMessage) {
+      const timer = setTimeout(() => {
+        setSuccessMessage(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [successMessage]);
+
+  useEffect(() => {
+    if (errorMessage) {
+      const timer = setTimeout(() => {
+        setErrorMessage(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [errorMessage]);
+
+  const parseErrorMessage = (err: any): string => {
+    const raw = String(err?.message || "");
+    if (raw.includes("یافت نشد") || raw.includes("not found") || raw.includes("NOT_FOUND")) {
+      return t.adminRequests.requestNotFoundError;
+    }
+    if (raw.includes("فردا") || raw.includes("tomorrow") || raw.includes("حداقل برای فردا")) {
+      return t.adminRequests.dateMustBeTomorrowError;
+    }
+    if (raw.includes("رزرو شده") || raw.includes("already booked")) {
+      return t.adminRequests.slotAlreadyBookedError;
+    }
+    if (raw.includes("مطابقت ندارد") || raw.includes("pattern") || raw.includes("match")) {
+      return t.adminRequests.patternMismatchError;
+    }
+    if (raw.includes("تداخل زمانی") || raw.includes("conflict")) {
+      return t.adminRequests.professorConflictError;
+    }
+    if (raw.includes("هیئت داوران") && (raw.includes("غیرفعال") || raw.includes("deactivated"))) {
+      return t.adminRequests.committeeDeactivatedError;
+    }
+    if (raw.includes("هیچ استاد فعالی") || raw.includes("No active faculty")) {
+      return t.adminRequests.noActiveProfessorsError;
+    }
+    if (raw.includes("درخواست شده") || raw.includes("requested")) {
+      return t.adminRequests.onlyRequestedStatusError;
+    }
+    if (raw.includes("علت رد") || raw.includes("۵ کاراکتر") || raw.includes("characters")) {
+      return t.adminRequests.declineReasonMinError;
+    }
+    if (raw.includes("بازه زمانی یافت نشد") || raw.includes("Time slot not found")) {
+      return t.adminRequests.slotNotFoundError;
+    }
+    return raw || (lang === "fa" ? "خطایی رخ داد" : "An error occurred");
+  };
 
   // Fetch pending requests
   const { data: requestsData, isLoading: requestsLoading } = useQuery({
@@ -60,7 +115,10 @@ export function RequestsView() {
     }) => {
       const res = await fetch(`/api/v1/requests/${sessionId}/assign`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Accept-Language": lang,
+        },
         body: JSON.stringify({ slot_id: slotId, scheduled_date: date }),
       });
       const data = await res.json();
@@ -68,11 +126,7 @@ export function RequestsView() {
       return data;
     },
     onSuccess: () => {
-      setSuccessMessage(
-        lang === "fa"
-          ? "جلسه دفاع با موفقیت به بازه انتخابی تخصیص یافت و برای داوران ارسال گردید"
-          : "Defense session assigned successfully and sent to examiners"
-      );
+      setSuccessMessage(t.adminRequests.assignedSuccess);
       setErrorMessage(null);
       setSelectedSession(null);
       setSelectedSlotId("");
@@ -81,7 +135,7 @@ export function RequestsView() {
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
     },
     onError: (err: any) => {
-      setErrorMessage(err.message);
+      setErrorMessage(parseErrorMessage(err));
       setSuccessMessage(null);
     },
   });
@@ -90,7 +144,10 @@ export function RequestsView() {
     mutationFn: async ({ sessionId, reason }: { sessionId: number; reason: string }) => {
       const res = await fetch(`/api/v1/requests/${sessionId}/decline`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Accept-Language": lang,
+        },
         body: JSON.stringify({ reason }),
       });
       const data = await res.json();
@@ -98,7 +155,7 @@ export function RequestsView() {
       return data;
     },
     onSuccess: () => {
-      setSuccessMessage(lang === "fa" ? "درخواست دفاع رد شد و به دانشجو اطلاع‌رسانی گردید" : "Request declined and student notified");
+      setSuccessMessage(t.adminRequests.declinedSuccess);
       setErrorMessage(null);
       setDeclineModalSessionId(null);
       setDeclineReason("");
@@ -107,7 +164,8 @@ export function RequestsView() {
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
     },
     onError: (err: any) => {
-      setErrorMessage(err.message);
+      setErrorMessage(parseErrorMessage(err));
+      setSuccessMessage(null);
     },
   });
 
@@ -131,16 +189,32 @@ export function RequestsView() {
       </div>
 
       {successMessage && (
-        <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 text-xs sm:text-sm flex items-center gap-2">
-          <CheckCircle className="w-5 h-5 flex-shrink-0 text-emerald-600" />
-          <span>{successMessage}</span>
+        <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 text-xs sm:text-sm flex items-center justify-between gap-2 animate-in fade-in">
+          <div className="flex items-center gap-2">
+            <CheckCircle className="w-5 h-5 flex-shrink-0 text-emerald-600" />
+            <span>{successMessage}</span>
+          </div>
+          <button
+            onClick={() => setSuccessMessage(null)}
+            className="text-emerald-600 hover:text-emerald-900 dark:text-emerald-400 dark:hover:text-emerald-200 p-1"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
       )}
 
       {errorMessage && (
-        <div className="p-4 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-xs sm:text-sm flex items-center gap-2">
-          <AlertTriangle className="w-5 h-5 flex-shrink-0 text-red-600" />
-          <span>{errorMessage}</span>
+        <div className="p-4 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-xs sm:text-sm flex items-center justify-between gap-2 animate-in fade-in">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-5 h-5 flex-shrink-0 text-red-600" />
+            <span>{errorMessage}</span>
+          </div>
+          <button
+            onClick={() => setErrorMessage(null)}
+            className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-200 p-1"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
       )}
 
@@ -300,11 +374,7 @@ export function RequestsView() {
                 <button
                   onClick={() => {
                     if (!selectedSlotId || !selectedDate) {
-                      setErrorMessage(
-                        lang === "fa"
-                          ? "لطفاً بازه زمانی و تاریخ را انتخاب نمایید"
-                          : "Please select a slot and scheduled date"
-                      );
+                      setErrorMessage(t.adminRequests.slotAndDateRequiredError);
                       return;
                     }
                     assignMutation.mutate({

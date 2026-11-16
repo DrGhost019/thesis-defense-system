@@ -5,14 +5,26 @@ import { CancelSessionSchema } from "@/lib/validations";
 import { apiSuccess, apiError, handleZodError } from "@/lib/api-response";
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+  const isEn =
+    req.headers.get("accept-language")?.startsWith("en") ||
+    req.nextUrl.searchParams.get("lang") === "en";
+
   const authUser = await getAuthenticatedUser(req);
   if (!authUser) {
-    return apiError("UNAUTHENTICATED", "ابتدا وارد سیستم شوید", 401);
+    return apiError(
+      "UNAUTHENTICATED",
+      isEn ? "Please authenticate first" : "ابتدا وارد سیستم شوید",
+      401
+    );
   }
 
   const sessionId = parseInt(params.id, 10);
   if (isNaN(sessionId)) {
-    return apiError("VALIDATION_ERROR", "شناسه جلسه نامعتبر است", 422);
+    return apiError(
+      "VALIDATION_ERROR",
+      isEn ? "Invalid defense session ID" : "شناسه جلسه نامعتبر است",
+      422
+    );
   }
 
   try {
@@ -28,10 +40,16 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     }
 
     return apiSuccess({
-      message: result.message,
+      message: isEn
+        ? "Defense session cancelled and date released"
+        : result.message,
       session: result.session,
     });
   } catch {
-    return apiError("INTERNAL_ERROR", "خطا در لغو جلسه دفاع", 500);
+    return apiError(
+      "INTERNAL_ERROR",
+      isEn ? "Internal error cancelling defense session" : "خطا در لغو جلسه دفاع",
+      500
+    );
   }
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "../providers";
 import { formatToJalali } from "@/lib/date-utils";
@@ -8,6 +8,7 @@ import { getTranslations } from "@/lib/translations";
 import {
   Clock,
   CheckCircle2,
+  CheckCircle,
   XCircle,
   AlertTriangle,
   Send,
@@ -16,6 +17,7 @@ import {
   GraduationCap,
   Calendar,
   User,
+  X,
 } from "lucide-react";
 
 export function MyRequestView({
@@ -30,6 +32,49 @@ export function MyRequestView({
   const [cancelModalSessionId, setCancelModalSessionId] = useState<number | null>(null);
   const [cancelReason, setCancelReason] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  // Auto-dismiss notifications after 5 seconds
+  useEffect(() => {
+    if (successMessage) {
+      const timer = setTimeout(() => {
+        setSuccessMessage(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [successMessage]);
+
+  useEffect(() => {
+    if (errorMessage) {
+      const timer = setTimeout(() => {
+        setErrorMessage(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [errorMessage]);
+
+  const parseErrorMessage = (err: any): string => {
+    const raw = String(err?.message || "");
+    if (raw.includes("یک درخواست فعال") || raw.includes("active request") || raw.includes("active defense request")) {
+      return t.student.activeRequestError;
+    }
+    if (raw.includes("پروفایل شما ناقص است") || raw.includes("profile")) {
+      return t.student.profileIncompleteError;
+    }
+    if (raw.includes("حداقل ۵ کاراکتر") || raw.includes("characters")) {
+      return t.student.cancelReasonMinError;
+    }
+    if (raw.includes("تنها دانشجو یا اساتید داور") || raw.includes("authorized")) {
+      return t.student.cancelForbiddenError;
+    }
+    if (raw.includes("یافت نشد") || raw.includes("not found")) {
+      return t.student.sessionNotFoundError;
+    }
+    if (raw.includes("فقط جلسات در وضعیت") || raw.includes("status")) {
+      return t.student.onlyAssignedOrConfirmedError;
+    }
+    return raw || (lang === "fa" ? "خطایی رخ داد" : "An error occurred");
+  };
 
   const { data } = useQuery({
     queryKey: ["my-requests"],
@@ -44,7 +89,10 @@ export function MyRequestView({
     mutationFn: async (reqNote: string) => {
       const res = await fetch("/api/v1/requests", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Accept-Language": lang,
+        },
         body: JSON.stringify({ note: reqNote }),
       });
       const resData = await res.json();
@@ -53,12 +101,14 @@ export function MyRequestView({
     },
     onSuccess: () => {
       setNote("");
+      setSuccessMessage(t.student.requestSubmittedSuccess);
       setErrorMessage(null);
       queryClient.invalidateQueries({ queryKey: ["my-requests"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
     },
     onError: (err: any) => {
-      setErrorMessage(err.message);
+      setErrorMessage(parseErrorMessage(err));
+      setSuccessMessage(null);
     },
   });
 
@@ -66,7 +116,10 @@ export function MyRequestView({
     mutationFn: async ({ sessionId, reason }: { sessionId: number; reason: string }) => {
       const res = await fetch(`/api/v1/sessions/${sessionId}/cancel`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Accept-Language": lang,
+        },
         body: JSON.stringify({ reason }),
       });
       const resData = await res.json();
@@ -76,11 +129,14 @@ export function MyRequestView({
     onSuccess: () => {
       setCancelModalSessionId(null);
       setCancelReason("");
+      setSuccessMessage(t.student.sessionCancelledSuccess);
+      setErrorMessage(null);
       queryClient.invalidateQueries({ queryKey: ["my-requests"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
     },
     onError: (err: any) => {
-      setErrorMessage(err.message);
+      setErrorMessage(parseErrorMessage(err));
+      setSuccessMessage(null);
     },
   });
 
@@ -181,10 +237,33 @@ export function MyRequestView({
         </div>
       </div>
 
+      {successMessage && (
+        <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 text-xs sm:text-sm flex items-center justify-between gap-2 animate-in fade-in">
+          <div className="flex items-center gap-2">
+            <CheckCircle className="w-5 h-5 flex-shrink-0 text-emerald-600" />
+            <span>{successMessage}</span>
+          </div>
+          <button
+            onClick={() => setSuccessMessage(null)}
+            className="text-emerald-600 hover:text-emerald-900 dark:text-emerald-400 dark:hover:text-emerald-200 p-1"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
       {errorMessage && (
-        <div className="p-4 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-sm flex items-center gap-2">
-          <AlertTriangle className="w-5 h-5 flex-shrink-0" />
-          <span>{errorMessage}</span>
+        <div className="p-4 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-xs sm:text-sm flex items-center justify-between gap-2 animate-in fade-in">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-5 h-5 flex-shrink-0 text-red-600" />
+            <span>{errorMessage}</span>
+          </div>
+          <button
+            onClick={() => setErrorMessage(null)}
+            className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-200 p-1"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
       )}
 

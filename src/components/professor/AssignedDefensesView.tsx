@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "../providers";
 import { formatToJalali } from "@/lib/date-utils";
@@ -14,6 +14,7 @@ import {
   GraduationCap,
   AlertTriangle,
   Loader2,
+  X,
 } from "lucide-react";
 
 export function AssignedDefensesView() {
@@ -22,6 +23,42 @@ export function AssignedDefensesView() {
   const queryClient = useQueryClient();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  // Auto-dismiss notifications after 5 seconds
+  useEffect(() => {
+    if (successMessage) {
+      const timer = setTimeout(() => {
+        setSuccessMessage(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [successMessage]);
+
+  useEffect(() => {
+    if (errorMessage) {
+      const timer = setTimeout(() => {
+        setErrorMessage(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [errorMessage]);
+
+  const parseErrorMessage = (err: any): string => {
+    const raw = String(err?.message || "");
+    if (raw.includes("کرسی داوری یافت نشد") || raw.includes("not found")) {
+      return t.assignedDefenses.seatNotFoundError;
+    }
+    if (raw.includes("اجازه ثبت نظر") || raw.includes("forbidden") || raw.includes("FORBIDDEN")) {
+      return t.assignedDefenses.forbiddenSeatError;
+    }
+    if (raw.includes("وضعیت انتظار تایید") || raw.includes("no longer awaiting")) {
+      return t.assignedDefenses.notInAssignedStatusError;
+    }
+    if (raw.includes("قبلاً ثبت شده") || raw.includes("already been recorded")) {
+      return t.assignedDefenses.decisionAlreadyRecordedError;
+    }
+    return raw || (lang === "fa" ? "خطایی رخ داد" : "An error occurred");
+  };
 
   const { data, isLoading } = useQuery({
     queryKey: ["assigned-seats"],
@@ -36,7 +73,10 @@ export function AssignedDefensesView() {
     mutationFn: async ({ seatId, approve }: { seatId: number; approve: boolean }) => {
       const res = await fetch(`/api/v1/seats/${seatId}/decision`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Accept-Language": lang,
+        },
         body: JSON.stringify({ approve }),
       });
       const resData = await res.json();
@@ -44,15 +84,21 @@ export function AssignedDefensesView() {
       return resData;
     },
     onSuccess: (resData) => {
-      setSuccessMessage(
-        resData.message || (lang === "fa" ? "نظر شما با موفقیت ثبت شد" : "Decision recorded successfully")
-      );
+      if (resData.sessionStatus === "confirmed") {
+        setSuccessMessage(t.assignedDefenses.allConfirmedSuccess);
+      } else if (resData.seatStatus === "rejected") {
+        setSuccessMessage(t.assignedDefenses.declinedSuccess);
+      } else if (resData.seatStatus === "approved") {
+        setSuccessMessage(t.assignedDefenses.awaitingOthersSuccess);
+      } else {
+        setSuccessMessage(t.assignedDefenses.decisionRecordedSuccess);
+      }
       setErrorMessage(null);
       queryClient.invalidateQueries({ queryKey: ["assigned-seats"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
     },
     onError: (err: any) => {
-      setErrorMessage(err.message);
+      setErrorMessage(parseErrorMessage(err));
       setSuccessMessage(null);
     },
   });
@@ -72,16 +118,32 @@ export function AssignedDefensesView() {
       </div>
 
       {successMessage && (
-        <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 text-xs sm:text-sm flex items-center gap-2">
-          <CheckCircle className="w-5 h-5 flex-shrink-0 text-emerald-600" />
-          <span>{successMessage}</span>
+        <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 text-xs sm:text-sm flex items-center justify-between gap-2 animate-in fade-in">
+          <div className="flex items-center gap-2">
+            <CheckCircle className="w-5 h-5 flex-shrink-0 text-emerald-600" />
+            <span>{successMessage}</span>
+          </div>
+          <button
+            onClick={() => setSuccessMessage(null)}
+            className="text-emerald-600 hover:text-emerald-900 dark:text-emerald-400 dark:hover:text-emerald-200 p-1"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
       )}
 
       {errorMessage && (
-        <div className="p-4 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-xs sm:text-sm flex items-center gap-2">
-          <AlertTriangle className="w-5 h-5 flex-shrink-0 text-red-600" />
-          <span>{errorMessage}</span>
+        <div className="p-4 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-xs sm:text-sm flex items-center justify-between gap-2 animate-in fade-in">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-5 h-5 flex-shrink-0 text-red-600" />
+            <span>{errorMessage}</span>
+          </div>
+          <button
+            onClick={() => setErrorMessage(null)}
+            className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-200 p-1"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
       )}
 

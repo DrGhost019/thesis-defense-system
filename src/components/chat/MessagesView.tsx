@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "../providers";
 import { getTranslations } from "@/lib/translations";
@@ -9,6 +9,8 @@ import {
   Send,
   Lock,
   Loader2,
+  AlertTriangle,
+  X,
 } from "lucide-react";
 
 export function MessagesView({ initialSessionId }: { initialSessionId?: number }) {
@@ -19,6 +21,33 @@ export function MessagesView({ initialSessionId }: { initialSessionId?: number }
   const [sessionId, setSessionId] = useState<number | null>(initialSessionId || null);
   const [content, setContent] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Auto-dismiss error notifications after 5 seconds
+  useEffect(() => {
+    if (errorMessage) {
+      const timer = setTimeout(() => {
+        setErrorMessage(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [errorMessage]);
+
+  const parseErrorMessage = (err: any): string => {
+    const raw = String(err?.message || "");
+    if (raw.includes("قطعی") || raw.includes("confirmed")) {
+      return t.messages.onlyConfirmedSessionError;
+    }
+    if (raw.includes("تنها اعضای این جلسه") || raw.includes("members")) {
+      return t.messages.forbiddenMessageError;
+    }
+    if (raw.includes("یافت نشد") || raw.includes("not found")) {
+      return t.messages.sessionNotFoundError;
+    }
+    if (raw.includes("دسترسی به پیام‌های این جلسه را ندارید") || raw.includes("access")) {
+      return t.messages.noAccessError;
+    }
+    return raw || (lang === "fa" ? "خطایی رخ داد" : "An error occurred");
+  };
 
   // Fetch list of confirmed sessions the user belongs to
   const { data: dashboardData } = useQuery({
@@ -75,7 +104,7 @@ export function MessagesView({ initialSessionId }: { initialSessionId?: number }
       queryClient.invalidateQueries({ queryKey: ["session-messages", effectiveSessionId] });
     },
     onError: (err: any) => {
-      setErrorMessage(err.message);
+      setErrorMessage(parseErrorMessage(err));
     },
   });
 
@@ -191,7 +220,19 @@ export function MessagesView({ initialSessionId }: { initialSessionId?: number }
           {/* Message Input Box */}
           <div className="p-3 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 rounded-b-2xl">
             {errorMessage && (
-              <p className="text-xs text-red-600 dark:text-red-400 mb-2">{errorMessage}</p>
+              <div className="p-3 mb-2 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-xs flex items-center justify-between gap-2 animate-in fade-in">
+                <div className="flex items-center gap-1.5">
+                  <AlertTriangle className="w-4 h-4 flex-shrink-0 text-red-600" />
+                  <span>{errorMessage}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setErrorMessage(null)}
+                  className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-200 p-0.5"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
             )}
 
             {isReadOnly ? (

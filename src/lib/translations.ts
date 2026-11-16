@@ -209,6 +209,14 @@ export const translations = {
       scheduledDate: "تاریخ برگزاری:",
       scheduledTime: "ساعت برگزاری:",
       examinerFaculty: "استاد / هیئت داوران:",
+      requestSubmittedSuccess: "درخواست دفاع شما با موفقیت ثبت شد",
+      sessionCancelledSuccess: "جلسه دفاع با موفقیت لغو شد و تاریخ آزاد گردید",
+      activeRequestError: "شما در حال حاضر یک درخواست فعال (در انتظار، تخصیص‌یافته یا تأیید شده) در سامانه دارید",
+      profileIncompleteError: "پروفایل شما ناقص است. لطفاً ابتدا مقطع تحصیلی و عنوان پایان‌نامه را تکمیل کنید",
+      cancelReasonMinError: "علت لغو باید حداقل ۵ کاراکتر باشد",
+      sessionNotFoundError: "جلسه دفاع یافت نشد",
+      cancelForbiddenError: "تنها دانشجو یا اساتید داور این جلسه مجاز به لغو آن هستند",
+      onlyAssignedOrConfirmedError: "فقط جلسات در وضعیت 'تخصیص‌یافته' یا 'تأییدشده' قابل لغو هستند",
     },
 
     // My Slots View (Professors)
@@ -289,6 +297,14 @@ export const translations = {
       noUpcomingSessions: "جلسه دفاع قطعی پیش‌رویی ندارید.",
       myDecisionRecorded: "نظر شما:",
       sessionStatus: "وضعیت جلسه:",
+      allConfirmedSuccess: "با تأیید شما تمامی داوران جلسه را تایید کردند و جلسه قطعی شد",
+      awaitingOthersSuccess: "تأیید شما ثبت شد؛ جلسه در انتظار تأیید سایر داوران است",
+      declinedSuccess: "جلسه دفاع با نظر منفی شما رد شد و تاریخ آزاد گردید",
+      decisionRecordedSuccess: "نظر شما با موفقیت ثبت شد",
+      seatNotFoundError: "کرسی داوری یافت نشد",
+      forbiddenSeatError: "شما اجازه ثبت نظر برای این کرسی را ندارید",
+      notInAssignedStatusError: "این جلسه دیگر در وضعیت انتظار تایید اساتید نیست",
+      decisionAlreadyRecordedError: "نظر شما برای این جلسه قبلاً ثبت شده است و قابل تغییر نیست",
     },
 
     // Admin Requests View
@@ -314,6 +330,19 @@ export const translations = {
       confirmDeclineBtn: "تأیید و رد درخواست",
       declining: "در حال ثبت رد...",
       availableOccurrences: "جلسات خالی این بازه در روزهای کاری پیش‌رو:",
+      assignedSuccess: "جلسه دفاع با موفقیت به بازه انتخابی تخصیص یافت و برای داوران ارسال گردید",
+      declinedSuccess: "درخواست دفاع رد شد و به دانشجو اطلاع‌رسانی گردید",
+      requestNotFoundError: "درخواست دفاع یافت نشد",
+      onlyRequestedStatusError: "فقط درخواست‌های در وضعیت 'درخواست شده' قابل تخصیص هستند",
+      dateMustBeTomorrowError: "تاریخ انتخابی برای دفاع باید حداقل برای فردا یا روزهای بعد باشد",
+      slotNotFoundError: "بازه زمانی یافت نشد یا لغو شده است",
+      patternMismatchError: "تاریخ انتخابی با بازه یا الگوی تکرار این بازه زمانی مطابقت ندارد",
+      slotAlreadyBookedError: "این بازه زمانی در تاریخ انتخابی قبلاً توسط جلسه دیگری رزرو شده است",
+      committeeDeactivatedError: "هیئت داوران این بازه غیرفعال شده است",
+      noActiveProfessorsError: "هیچ استاد فعالی برای این بازه تعریف نشده است",
+      professorConflictError: "تداخل زمانی: حداقل یکی از اساتید داور در این تاریخ و ساعت جلسه دفاع دیگری دارد",
+      declineReasonMinError: "علت رد درخواست باید حداقل ۵ کاراکتر باشد",
+      slotAndDateRequiredError: "لطفاً ابتدا یک بازه زمانی خالی و یک تاریخ معتبر انتخاب کنید",
     },
 
     // Admin Committees View
@@ -423,6 +452,11 @@ export const translations = {
       timeLabel: "ساعت:",
       studentLabel: "دانشجو:",
       emptyChat: "هنوز پیامی در این جلسه ثبت نشده است. اولین پیام را ارسال کنید.",
+      messageSentSuccess: "پیام با موفقیت ارسال شد",
+      onlyConfirmedSessionError: "ارسال پیام تنها در جلسات دفاع قطعی و تأییدشده امکان‌پذیر است",
+      forbiddenMessageError: "تنها اعضای این جلسه (دانشجو و داوران تخصیص‌یافته) می‌توانند پیام ارسال کنند",
+      sessionNotFoundError: "جلسه دفاع یافت نشد",
+      noAccessError: "شما دسترسی به پیام‌های این جلسه را ندارید",
     },
 
     // Profile View
@@ -686,6 +720,14 @@ export const translations = {
       scheduledDate: "Scheduled Date:",
       scheduledTime: "Scheduled Time:",
       examinerFaculty: "Faculty / Committee:",
+      requestSubmittedSuccess: "Your defense request has been submitted successfully",
+      sessionCancelledSuccess: "Defense session cancelled successfully and slot released",
+      activeRequestError: "You already have an active defense request (pending, assigned, or confirmed) in the system",
+      profileIncompleteError: "Your profile is incomplete. Please complete your degree level and thesis title first",
+      cancelReasonMinError: "Cancellation reason must be at least 5 characters",
+      sessionNotFoundError: "Defense session not found",
+      cancelForbiddenError: "Only the student or assigned faculty members are authorized to cancel this session",
+      onlyAssignedOrConfirmedError: "Only sessions in 'assigned' or 'confirmed' status can be cancelled",
     },
 
     // My Slots View (Professors)
@@ -766,6 +808,14 @@ export const translations = {
       noUpcomingSessions: "No upcoming confirmed defense sessions.",
       myDecisionRecorded: "Your Decision:",
       sessionStatus: "Session Status:",
+      allConfirmedSuccess: "With your approval, all committee members confirmed the session and it is now finalized",
+      awaitingOthersSuccess: "Your approval has been recorded; awaiting other committee members",
+      declinedSuccess: "Defense session was declined with your vote and the date has been released",
+      decisionRecordedSuccess: "Your decision has been recorded successfully",
+      seatNotFoundError: "Evaluation seat not found",
+      forbiddenSeatError: "You are not authorized to submit a decision for this seat",
+      notInAssignedStatusError: "This session is no longer awaiting faculty confirmation",
+      decisionAlreadyRecordedError: "Your decision for this session has already been recorded and cannot be changed",
     },
 
     // Admin Requests View
@@ -791,6 +841,19 @@ export const translations = {
       confirmDeclineBtn: "Confirm & Decline",
       declining: "Declining...",
       availableOccurrences: "Available occurrences for this slot on upcoming working days:",
+      assignedSuccess: "Defense session assigned successfully and sent to examiners",
+      declinedSuccess: "Defense request declined and student notified",
+      requestNotFoundError: "Defense request not found",
+      onlyRequestedStatusError: "Only requests in 'requested' status can be assigned",
+      dateMustBeTomorrowError: "Selected defense date must be tomorrow or later",
+      slotNotFoundError: "Time slot not found or cancelled",
+      patternMismatchError: "Selected date does not match the recurring pattern of this slot",
+      slotAlreadyBookedError: "This time slot is already booked for another session on this date",
+      committeeDeactivatedError: "The committee for this slot has been deactivated",
+      noActiveProfessorsError: "No active faculty assigned to this slot",
+      professorConflictError: "Time conflict: at least one committee member has another defense session at this time",
+      declineReasonMinError: "Decline reason must be at least 5 characters",
+      slotAndDateRequiredError: "Please select an open availability slot and a valid date first",
     },
 
     // Admin Committees View
@@ -900,6 +963,11 @@ export const translations = {
       timeLabel: "Time:",
       studentLabel: "Student:",
       emptyChat: "No messages in this session yet. Send the first message.",
+      messageSentSuccess: "Message sent successfully",
+      onlyConfirmedSessionError: "Messaging is only permitted in confirmed and finalized defense sessions",
+      forbiddenMessageError: "Only members of this session (student and assigned examiners) can send messages",
+      sessionNotFoundError: "Defense session not found",
+      noAccessError: "You do not have access to messages in this session",
     },
 
     // Profile View
