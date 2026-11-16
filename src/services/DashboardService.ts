@@ -41,7 +41,19 @@ export class DashboardService {
         take: 5,
       });
 
-      const notices: { id: string; type: string; title: string; text: string; date: Date }[] = [];
+      const notices: {
+        id: string;
+        type: string;
+        title: string;
+        titleFa: string;
+        titleEn: string;
+        text: string;
+        textFa: string;
+        textEn: string;
+        date: Date;
+        count?: number;
+        actionUrl?: string;
+      }[] = [];
 
       if (activeSession) {
         if (activeSession.status === "requested") {
@@ -49,15 +61,24 @@ export class DashboardService {
             id: `req_${activeSession.session_id}`,
             type: "info",
             title: "درخواست در انتظار بررسی",
+            titleFa: "درخواست در انتظار بررسی",
+            titleEn: "Request Awaiting Review",
             text: "درخواست دفاع شما ثبت شده و در نوبت بررسی توسط اداره آموزش قرار دارد.",
+            textFa: "درخواست دفاع شما ثبت شده و در نوبت بررسی توسط اداره آموزش قرار دارد.",
+            textEn: "Your defense request has been submitted and is currently queued for academic review.",
             date: activeSession.created_at,
           });
         } else if (activeSession.status === "assigned") {
+          const dateStr = activeSession.scheduled_date ? activeSession.scheduled_date.toISOString().slice(0, 10) : "";
           notices.push({
             id: `assign_${activeSession.session_id}`,
             type: "warning",
             title: "تخصیص تاریخ دفاع",
-            text: `تاریخ دفاع شما برای ${activeSession.scheduled_date?.toISOString().slice(0, 10)} تعیین شده و در انتظار تأیید داوران است.`,
+            titleFa: "تخصیص تاریخ دفاع",
+            titleEn: "Defense Date Assigned",
+            text: `تاریخ دفاع شما برای ${dateStr} تعیین شده و در انتظار تأیید داوران است.`,
+            textFa: `تاریخ دفاع شما برای ${dateStr} تعیین شده و در انتظار تأیید داوران است.`,
+            textEn: `Your defense date has been scheduled for ${dateStr} and is awaiting examiner approval.`,
             date: activeSession.assigned_at || activeSession.created_at,
           });
         } else if (activeSession.status === "confirmed") {
@@ -65,7 +86,11 @@ export class DashboardService {
             id: `conf_${activeSession.session_id}`,
             type: "success",
             title: "تأیید نهایی جلسه دفاع",
-            text: `جلسه دفاع شما قطعی شد. لطفاً در صورت نیاز از بخش پیام‌ها با هیئت داوران در ارتباط باشید.`,
+            titleFa: "تأیید نهایی جلسه دفاع",
+            titleEn: "Defense Session Confirmed",
+            text: "جلسه دفاع شما قطعی شد. لطفاً در صورت نیاز از بخش پیام‌ها با هیئت داوران در ارتباط باشید.",
+            textFa: "جلسه دفاع شما قطعی شد. لطفاً در صورت نیاز از بخش پیام‌ها با هیئت داوران در ارتباط باشید.",
+            textEn: "Your defense session is confirmed. You can communicate with the evaluation committee via messages.",
             date: activeSession.confirmed_at || activeSession.created_at,
           });
         }
@@ -138,7 +163,11 @@ export class DashboardService {
         id: `seat_${seat.participant_id}`,
         type: "action_required",
         title: "درخواست داوری جدید",
+        titleFa: "درخواست داوری جدید",
+        titleEn: "New Defense Review Request",
         text: `جلسه دفاع دانشجو ${seat.session.student.user.full_name} به شما اختصاص یافته و نیازمند اعلام نظر شماست.`,
+        textFa: `جلسه دفاع دانشجو ${seat.session.student.user.full_name} به شما اختصاص یافته و نیازمند اعلام نظر شماست.`,
+        textEn: `The defense session for student ${seat.session.student.user.full_name} has been assigned to you and awaits your evaluation.`,
         date: seat.session.assigned_at || new Date(),
         actionUrl: "/assigned-defenses",
       }));
@@ -178,14 +207,31 @@ export class DashboardService {
         take: 5,
       });
 
-      const notices: { id: string; type: string; title: string; text: string; date: Date; actionUrl?: string }[] = [];
+      const notices: {
+        id: string;
+        type: string;
+        title: string;
+        titleFa: string;
+        titleEn: string;
+        text: string;
+        textFa: string;
+        textEn: string;
+        date: Date;
+        count?: number;
+        actionUrl?: string;
+      }[] = [];
 
       if (pendingRequestsCount > 0) {
         notices.push({
           id: "admin_pending",
           type: "action_required",
           title: "درخواست‌های در انتظار تخصیص",
+          titleFa: "درخواست‌های در انتظار تخصیص",
+          titleEn: "Requests Awaiting Assignment",
           text: `تعداد ${pendingRequestsCount} درخواست دفاع در انتظار تخصیص زمان و استاد هستند.`,
+          textFa: `تعداد ${pendingRequestsCount} درخواست دفاع در انتظار تخصیص زمان و استاد هستند.`,
+          textEn: `${pendingRequestsCount} defense request${pendingRequestsCount > 1 ? "s" : ""} awaiting slot and committee assignment.`,
+          count: pendingRequestsCount,
           date: new Date(),
           actionUrl: "/requests",
         });
@@ -196,7 +242,12 @@ export class DashboardService {
           id: "admin_failed_notif",
           type: "warning",
           title: "خطا در ارسال پیام‌های بله",
+          titleFa: "خطا در ارسال پیام‌های بله",
+          titleEn: "Bale Messenger Delivery Failures",
           text: `تعداد ${failedNotificationsCount} اعلان بله با خطا مواجه شده است.`,
+          textFa: `تعداد ${failedNotificationsCount} اعلان بله با خطا مواجه شده است.`,
+          textEn: `${failedNotificationsCount} Bale notification${failedNotificationsCount > 1 ? "s" : ""} failed delivery.`,
+          count: failedNotificationsCount,
           date: new Date(),
           actionUrl: "/admin/reports",
         });

@@ -3,7 +3,7 @@
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "../providers";
-import { formatToJalali, toTehranDateString } from "@/lib/date-utils";
+import { formatToJalali, toTehranDateString, toPersianDigits } from "@/lib/date-utils";
 import { getTranslations } from "@/lib/translations";
 import { TabId } from "../layout/Navigation";
 import {
@@ -75,37 +75,63 @@ export function DashboardView({ onNavigate }: { onNavigate: (tab: TabId) => void
           </h3>
 
           <div className="space-y-2.5">
-            {notices.map((n: any) => (
-              <div
-                key={n.id}
-                className={`p-4 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs sm:text-sm shadow-2xs ${
-                  n.type === "action_required"
-                    ? "bg-amber-50 dark:bg-amber-950/40 border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-200"
-                    : n.type === "warning"
-                    ? "bg-blue-50 dark:bg-blue-950/40 border-blue-300 dark:border-blue-800 text-blue-900 dark:text-blue-200"
-                    : "bg-emerald-50 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-800 text-emerald-900 dark:text-emerald-200"
-                }`}
-              >
-                <div>
-                  <div className="font-bold">{n.title}</div>
-                  <div className="text-xs opacity-90 mt-0.5">{n.text}</div>
-                </div>
+            {notices.map((n: any) => {
+              const noticeTitle =
+                lang === "en"
+                  ? n.titleEn ||
+                    (n.id === "admin_pending"
+                      ? "Requests Awaiting Assignment"
+                      : n.id === "admin_failed_notif"
+                      ? "Bale Messenger Delivery Failures"
+                      : n.title)
+                  : n.titleFa || n.title;
 
-                {n.actionUrl && (
-                  <button
-                    onClick={() => {
-                      if (n.actionUrl === "/requests") onNavigate("requests");
-                      if (n.actionUrl === "/assigned-defenses") onNavigate("assigned-defenses");
-                      if (n.actionUrl === "/admin/reports") onNavigate("reports");
-                    }}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-slate-800 rounded-lg text-xs font-bold border border-current shadow-2xs hover:bg-slate-50 dark:hover:bg-slate-700 self-start sm:self-auto transition"
-                  >
-                    <span>{t.dashboard.viewAction}</span>
-                    <ArrowRight className="w-3.5 h-3.5 rtl:rotate-180" />
-                  </button>
-                )}
-              </div>
-            ))}
+              let noticeText =
+                lang === "en"
+                  ? n.textEn ||
+                    (n.id === "admin_pending"
+                      ? `${n.count || data?.stats?.pendingRequestsCount || 1} defense request${(n.count || data?.stats?.pendingRequestsCount || 1) > 1 ? "s" : ""} awaiting slot and committee assignment.`
+                      : n.id === "admin_failed_notif"
+                      ? `${n.count || data?.stats?.failedNotificationsCount || 0} Bale notification${(n.count || data?.stats?.failedNotificationsCount || 0) > 1 ? "s" : ""} failed delivery.`
+                      : n.text)
+                  : n.textFa || n.text;
+
+              if (lang === "fa") {
+                noticeText = toPersianDigits(noticeText);
+              }
+
+              return (
+                <div
+                  key={n.id}
+                  className={`p-4 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs sm:text-sm shadow-2xs ${
+                    n.type === "action_required"
+                      ? "bg-amber-50 dark:bg-amber-950/40 border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-200"
+                      : n.type === "warning"
+                      ? "bg-blue-50 dark:bg-blue-950/40 border-blue-300 dark:border-blue-800 text-blue-900 dark:text-blue-200"
+                      : "bg-emerald-50 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-800 text-emerald-900 dark:text-emerald-200"
+                  }`}
+                >
+                  <div>
+                    <div className="font-bold">{noticeTitle}</div>
+                    <div className="text-xs opacity-90 mt-0.5">{noticeText}</div>
+                  </div>
+
+                  {n.actionUrl && (
+                    <button
+                      onClick={() => {
+                        if (n.actionUrl === "/requests") onNavigate("requests");
+                        if (n.actionUrl === "/assigned-defenses") onNavigate("assigned-defenses");
+                        if (n.actionUrl === "/admin/reports") onNavigate("reports");
+                      }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-slate-800 rounded-lg text-xs font-bold border border-current shadow-2xs hover:bg-slate-50 dark:hover:bg-slate-700 self-start sm:self-auto transition"
+                    >
+                      <span>{t.dashboard.viewAction}</span>
+                      <ArrowRight className="w-3.5 h-3.5 rtl:rotate-180" />
+                    </button>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
@@ -121,7 +147,7 @@ export function DashboardView({ onNavigate }: { onNavigate: (tab: TabId) => void
               {t.dashboard.pendingRequests}
             </span>
             <span className="text-2xl font-black text-amber-600 mt-1 block">
-              {data.stats.pendingRequestsCount}
+              {lang === "fa" ? toPersianDigits(data.stats.pendingRequestsCount) : data.stats.pendingRequestsCount}
             </span>
           </div>
 
@@ -133,7 +159,7 @@ export function DashboardView({ onNavigate }: { onNavigate: (tab: TabId) => void
               {t.dashboard.activeCommittees}
             </span>
             <span className="text-2xl font-black text-purple-600 mt-1 block">
-              {data.stats.totalCommittees}
+              {lang === "fa" ? toPersianDigits(data.stats.totalCommittees) : data.stats.totalCommittees}
             </span>
           </div>
 
@@ -145,7 +171,7 @@ export function DashboardView({ onNavigate }: { onNavigate: (tab: TabId) => void
               {t.dashboard.registeredFaculty}
             </span>
             <span className="text-2xl font-black text-emerald-600 mt-1 block">
-              {data.stats.totalProfessors}
+              {lang === "fa" ? toPersianDigits(data.stats.totalProfessors) : data.stats.totalProfessors}
             </span>
           </div>
 
@@ -157,7 +183,7 @@ export function DashboardView({ onNavigate }: { onNavigate: (tab: TabId) => void
               {t.dashboard.students}
             </span>
             <span className="text-2xl font-black text-blue-600 mt-1 block">
-              {data.stats.totalStudents}
+              {lang === "fa" ? toPersianDigits(data.stats.totalStudents) : data.stats.totalStudents}
             </span>
           </div>
 
@@ -169,7 +195,7 @@ export function DashboardView({ onNavigate }: { onNavigate: (tab: TabId) => void
               {t.dashboard.unlinkedBale}
             </span>
             <span className="text-2xl font-black text-slate-600 dark:text-slate-300 mt-1 block">
-              {data.stats.unlinkedUsersCount}
+              {lang === "fa" ? toPersianDigits(data.stats.unlinkedUsersCount) : data.stats.unlinkedUsersCount}
             </span>
           </div>
 
@@ -181,7 +207,7 @@ export function DashboardView({ onNavigate }: { onNavigate: (tab: TabId) => void
               {t.dashboard.failedNotifications}
             </span>
             <span className="text-2xl font-black text-red-600 mt-1 block">
-              {data.stats.failedNotificationsCount}
+              {lang === "fa" ? toPersianDigits(data.stats.failedNotificationsCount) : data.stats.failedNotificationsCount}
             </span>
           </div>
         </div>
