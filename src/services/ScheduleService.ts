@@ -149,11 +149,42 @@ export class ScheduleService {
   /**
    * Generates a Landscape A4 PDF of the weekly schedule using Playwright
    */
-  public static async exportPdf(weekStart?: string): Promise<Buffer> {
+  public static async exportPdf(
+    weekStart?: string,
+    lang: "fa" | "en" = "fa",
+    calendar: "jalali" | "gregorian" = "jalali"
+  ): Promise<Buffer> {
     const schedule = await this.buildWeek(weekStart);
     const nowTehran = toTehranDateString(getTehranDate());
     const jalaliWeekStart = formatToJalali(schedule.week_start_saturday);
     const jalaliWeekEnd = formatToJalali(schedule.week_end_wednesday);
+
+    const isEn = lang === "en";
+    const isJalali = calendar === "jalali";
+    const dir = isEn ? "ltr" : "rtl";
+
+    const title = isEn
+      ? "Thesis Defense Scheduling System"
+      : "سامانه زمان‌بندی جلسات دفاع پایان‌نامه";
+
+    const subtitle = isEn
+      ? "Weekly Faculty & Evaluation Committees Availability Schedule"
+      : "برنامه هفتگی حضور اساتید و هیئت‌های داوران";
+
+    const weekRangeLabel = isEn
+      ? isJalali
+        ? `Week Range: ${jalaliWeekStart} to ${jalaliWeekEnd} (${schedule.week_start_saturday} to ${schedule.week_end_wednesday})`
+        : `Week Range: ${schedule.week_start_saturday} to ${schedule.week_end_wednesday}`
+      : `بازه هفته: ${jalaliWeekStart} الی ${jalaliWeekEnd} (میلادی: ${schedule.week_start_saturday} to ${schedule.week_end_wednesday})`;
+
+    const generatedAtLabel = isEn
+      ? `Generated: ${nowTehran}`
+      : `زمان تولید: ${nowTehran}`;
+
+    const legendSingle = isEn ? "Single Professor Slot" : "بازه تک‌جلسه استاد";
+    const legendRecurring = isEn ? "Recurring Professor Slot" : "بازه تکرارشونده استاد";
+    const legendCommittee = isEn ? "Evaluation Committee" : "هیئت داوران";
+    const noSlotsText = isEn ? "No availability slots" : "بدون بازه آزاد";
 
     const logoPath = path.join(process.cwd(), "public/assets/uni.png");
     let logoBase64 = "";
@@ -177,10 +208,10 @@ export class ScheduleService {
 
     // Build standalone HTML for Playwright rendering
     const html = `<!DOCTYPE html>
-<html lang="fa" dir="rtl">
+<html lang="${isEn ? "en" : "fa"}" dir="${dir}">
 <head>
   <meta charset="UTF-8">
-  <title>برنامه هفتگی حضور اساتید و دفاع پایان‌نامه</title>
+  <title>${title}</title>
   <style>
     ${
       fontBase64
@@ -191,11 +222,11 @@ export class ScheduleService {
         : ""
     }
     body {
-      font-family: 'Vazirmatn', sans-serif;
+      font-family: ${isEn ? "'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Vazirmatn'" : "'Vazirmatn', sans-serif"};
       margin: 0;
       padding: 16px;
       color: #1e293b;
-      direction: rtl;
+      direction: ${dir};
     }
     .header {
       display: flex;
@@ -226,7 +257,7 @@ export class ScheduleService {
       color: #64748b;
     }
     .meta-info {
-      text-align: left;
+      text-align: ${isEn ? "right" : "left"};
       font-size: 11px;
       color: #64748b;
     }
@@ -255,21 +286,21 @@ export class ScheduleService {
       padding: 6px 8px;
       border-radius: 4px;
       font-size: 11px;
-      border-right: 3px solid #3b82f6;
+      ${isEn ? "border-left: 3px solid #3b82f6;" : "border-right: 3px solid #3b82f6;"}
     }
     .block-single {
       background: #e0f2fe;
-      border-right-color: #0284c7;
+      ${isEn ? "border-left-color: #0284c7;" : "border-right-color: #0284c7;"}
       color: #0369a1;
     }
     .block-recurring {
       background: #fef3c7;
-      border-right-color: #d97706;
+      ${isEn ? "border-left-color: #d97706;" : "border-right-color: #d97706;"}
       color: #b45309;
     }
     .block-committee {
       background: #f3e8ff;
-      border-right-color: #9333ea;
+      ${isEn ? "border-left-color: #9333ea;" : "border-right-color: #9333ea;"}
       color: #7e22ce;
     }
     .block-time {
@@ -312,14 +343,13 @@ export class ScheduleService {
     <div class="logo-title">
       ${logoBase64 ? `<img class="logo-img" src="${logoBase64}" alt="University Logo" />` : ""}
       <div class="header-text">
-        <h1>سامانه زمان‌بندی جلسات دفاع پایان‌نامه</h1>
-        <p>برنامه هفتگی حضور اساتید و هیئت‌های داوران</p>
+        <h1>${title}</h1>
+        <p>${subtitle}</p>
       </div>
     </div>
     <div class="meta-info">
-      <div>بازه هفته: ${jalaliWeekStart} الی ${jalaliWeekEnd}</div>
-      <div>(میلادی: ${schedule.week_start_saturday} to ${schedule.week_end_wednesday})</div>
-      <div>زمان تولید: ${nowTehran}</div>
+      <div>${weekRangeLabel}</div>
+      <div>${generatedAtLabel}</div>
     </div>
   </div>
 
@@ -329,8 +359,10 @@ export class ScheduleService {
         ${schedule.days
           .map(
             (d) => `<th>
-            <div>${d.weekday_name_fa}</div>
-            <div style="font-size: 10px; opacity: 0.85;">${formatToJalali(d.date)}</div>
+            <div>${isEn ? d.weekday_name_en : d.weekday_name_fa}</div>
+            <div style="font-size: 10px; opacity: 0.85;">${
+              isJalali ? formatToJalali(d.date) : d.date
+            }</div>
           </th>`
           )
           .join("")}
@@ -341,7 +373,7 @@ export class ScheduleService {
         ${schedule.days
           .map((d) => {
             if (d.blocks.length === 0) {
-              return `<td><div style="color: #94a3b8; font-size: 11px; text-align: center; margin-top: 24px;">بدون بازه آزاد</div></td>`;
+              return `<td><div style="color: #94a3b8; font-size: 11px; text-align: center; margin-top: 24px;">${noSlotsText}</div></td>`;
             }
             const blocksHtml = d.blocks
               .map((b) => {
@@ -353,12 +385,12 @@ export class ScheduleService {
                   ? "block-single"
                   : "block-recurring";
                 const typeLabel = isSingle
-                  ? "تک‌جلسه"
-                  : b.recurrence_pattern === "odd_days"
-                  ? "تکرار روزهای فرد"
+                  ? (isEn ? "Single Day" : "تک‌جلسه")
                   : b.recurrence_pattern === "even_days"
-                  ? "تکرار روزهای زوج"
-                  : "تکرار هفتگی";
+                  ? (isEn ? "Even Days" : "تکرار روزهای زوج")
+                  : b.recurrence_pattern === "odd_days"
+                  ? (isEn ? "Odd Days" : "تکرار روزهای فرد")
+                  : (isEn ? "Weekly" : "تکرار هفتگی");
 
                 return `<div class="block ${blockClass}">
                   <div class="block-time">${b.start_time} - ${b.end_time}</div>
@@ -377,15 +409,15 @@ export class ScheduleService {
   <div class="legend">
     <div class="legend-item">
       <div class="legend-box" style="background: #e0f2fe; border: 1px solid #0284c7;"></div>
-      <span>بازه تک‌جلسه استاد</span>
+      <span>${legendSingle}</span>
     </div>
     <div class="legend-item">
       <div class="legend-box" style="background: #fef3c7; border: 1px solid #d97706;"></div>
-      <span>بازه تکرارشونده استاد</span>
+      <span>${legendRecurring}</span>
     </div>
     <div class="legend-item">
       <div class="legend-box" style="background: #f3e8ff; border: 1px solid #9333ea;"></div>
-      <span>هیئت داوران</span>
+      <span>${legendCommittee}</span>
     </div>
   </div>
 </body>

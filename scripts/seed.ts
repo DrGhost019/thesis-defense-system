@@ -123,13 +123,13 @@ async function main() {
   });
 
   // 4. Create Availability Slots
-  // Slot 1: Prof Ahmadi - Odd days 09:00 - 11:00
+  // Slot 1: Prof Ahmadi - Even days 09:00 - 11:00 (Sat, Mon, Wed)
   await prisma.availabilitySlot.create({
     data: {
       professor_id: prof1.professor_id,
       created_by_user_id: prof1User.user_id,
       slot_type: "recurring",
-      recurrence_pattern: "odd_days",
+      recurrence_pattern: "even_days",
       start_time: "09:00",
       end_time: "11:00",
       valid_from: new Date("2026-10-24"),
@@ -138,13 +138,13 @@ async function main() {
     },
   });
 
-  // Slot 2: Prof Hosseini - Even days 14:00 - 16:00
+  // Slot 2: Prof Hosseini - Odd days 14:00 - 16:00 (Sun, Tue)
   await prisma.availabilitySlot.create({
     data: {
       professor_id: prof2.professor_id,
       created_by_user_id: prof2User.user_id,
       slot_type: "recurring",
-      recurrence_pattern: "even_days",
+      recurrence_pattern: "odd_days",
       start_time: "14:00",
       end_time: "16:00",
       valid_from: new Date("2026-10-24"),
@@ -153,13 +153,13 @@ async function main() {
     },
   });
 
-  // Slot 3: Committee 1 - Odd days 13:00 - 15:00
+  // Slot 3: Committee 1 - Even days 13:00 - 15:00 (Sat, Mon, Wed)
   await prisma.availabilitySlot.create({
     data: {
       committee_id: committee1.committee_id,
       created_by_user_id: prof1User.user_id,
       slot_type: "recurring",
-      recurrence_pattern: "odd_days",
+      recurrence_pattern: "even_days",
       start_time: "13:00",
       end_time: "15:00",
       valid_from: new Date("2026-10-24"),

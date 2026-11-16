@@ -52,7 +52,7 @@ export function WeeklyScheduleView() {
   };
 
   const handleDownloadPdf = () => {
-    window.open(`/api/v1/schedule.pdf?week=${currentWeekSaturday}`, "_blank");
+    window.open(`/api/v1/schedule.pdf?week=${currentWeekSaturday}&lang=${lang}&calendar=${calendarType}`, "_blank");
   };
 
   const jalaliWeekStart = data?.week_start_saturday ? formatToJalali(data.week_start_saturday) : "";
@@ -284,10 +284,10 @@ export function WeeklyScheduleView() {
 
                               const patternLabel = isSingle
                                 ? t.schedule.single
-                                : block.recurrence_pattern === "odd_days"
-                                ? t.schedule.oddDays
                                 : block.recurrence_pattern === "even_days"
                                 ? t.schedule.evenDays
+                                : block.recurrence_pattern === "odd_days"
+                                ? t.schedule.oddDays
                                 : t.schedule.weekly;
 
                               return (

@@ -78,7 +78,7 @@ async function runTests() {
   assert(earlySlot.success === false, "T03: Slot starting before 08:00 refused");
 
   // T04: Define two overlapping slots for same professor -> Refused
-  // prof1 already has odd_days 09:00 - 11:00 from 2026-10-24 to 2026-12-31
+  // prof1 already has even_days 09:00 - 11:00 from 2026-10-24 to 2026-12-31
   const overlapSlot = await SlotService.define(
     {
       owner_type: "professor",
@@ -142,7 +142,7 @@ async function runTests() {
   const assignResult = await AssignmentService.assign(
     student1Session!.session_id,
     commSlot!.slot_id,
-    "2026-11-18", // Wednesday (Odd day, >= tomorrow)
+    "2026-11-18", // Wednesday (Even day, >= tomorrow)
     admin!.user_id
   );
   assert(assignResult.success === true, "T15a: Assignment of committee slot succeeds");

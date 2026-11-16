@@ -123,8 +123,8 @@ export function getWeekWorkingDays(saturdayDateStr: string): { dateStr: string; 
 
 /**
  * Checks whether a recurring slot pattern matches a given JS day
- * Odd days: Saturday (6), Monday (1), Wednesday (3)
- * Even days: Sunday (0), Tuesday (2)
+ * Even days (روزهای زوج): Saturday (6), Monday (1), Wednesday (3)
+ * Odd days (روزهای فرد): Sunday (0), Tuesday (2)
  * Weekly: exact weekday match
  */
 export function slotMatchesDay(
@@ -132,10 +132,10 @@ export function slotMatchesDay(
   weekday: Weekday | null,
   jsDay: number
 ): boolean {
-  if (pattern === "odd_days") {
+  if (pattern === "even_days") {
     return jsDay === 6 || jsDay === 1 || jsDay === 3;
   }
-  if (pattern === "even_days") {
+  if (pattern === "odd_days") {
     return jsDay === 0 || jsDay === 2;
   }
   if (pattern === "weekly" && weekday) {

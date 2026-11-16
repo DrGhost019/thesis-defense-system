@@ -123,7 +123,7 @@ export function MySlotsView() {
   const [committeeId, setCommitteeId] = useState<string>("");
   const [slotType, setSlotType] = useState<"single" | "recurring">("recurring");
   const [slotDate, setSlotDate] = useState<string>("");
-  const [pattern, setPattern] = useState<"odd_days" | "even_days" | "weekly">("odd_days");
+  const [pattern, setPattern] = useState<"odd_days" | "even_days" | "weekly">("even_days");
   const [weekday, setWeekday] = useState<"sat" | "sun" | "mon" | "tue" | "wed">("sat");
   const [startTime, setStartTime] = useState<string>("09:00");
   const [endTime, setEndTime] = useState<string>("11:00");
@@ -376,8 +376,8 @@ export function MySlotsView() {
                     onChange={(e) => setPattern(e.target.value as any)}
                     className="w-full p-2 text-xs sm:text-sm rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
                   >
-                    <option value="odd_days">{t.slots.oddDaysPattern}</option>
                     <option value="even_days">{t.slots.evenDaysPattern}</option>
+                    <option value="odd_days">{t.slots.oddDaysPattern}</option>
                     <option value="weekly">{t.slots.weeklyPattern}</option>
                   </select>
                 </div>
@@ -539,10 +539,10 @@ export function MySlotsView() {
                       ) : (
                         <span>
                           {t.slots.patternLabel}{" "}
-                          {slot.recurrence_pattern === "odd_days"
-                            ? t.slots.oddDaysPattern
-                            : slot.recurrence_pattern === "even_days"
+                          {slot.recurrence_pattern === "even_days"
                             ? t.slots.evenDaysPattern
+                            : slot.recurrence_pattern === "odd_days"
+                            ? t.slots.oddDaysPattern
                             : `${t.slots.weeklyPattern} (${slot.weekday})`}{" "}
                           ({lang === "fa" ? "از" : "from"}{" "}
                           {calendarType === "jalali"
