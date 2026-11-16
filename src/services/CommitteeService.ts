@@ -179,4 +179,57 @@ export class CommitteeService {
 
     return { success: true, committee: updated };
   }
+
+  public static async delete(committeeId: number) {
+    const committee = await prisma.committee.findUnique({
+      where: { committee_id: committeeId },
+      include: {
+        owned_slots: {
+          include: {
+            sessions: {
+              where: { status: { in: ["requested", "assigned", "confirmed"] } },
+            },
+          },
+        },
+      },
+    });
+
+    if (!committee) {
+      return { success: false, status: 404, message: "هیئت داوران یافت نشد" };
+    }
+
+    const hasActiveSessions = committee.owned_slots.some((s) => s.sessions.length > 0);
+    if (hasActiveSessions) {
+      return {
+        success: false,
+        status: 409,
+        code: "CONFLICT",
+        message: "امکان حذف هیئت داوران دارای جلسات دفاع فعال وجود ندارد",
+      };
+    }
+
+    await prisma.$transaction(async (tx) => {
+      // Nullify slot_id on any non-active sessions before deleting slots
+      const slotIds = committee.owned_slots.map((s) => s.slot_id);
+      if (slotIds.length > 0) {
+        await tx.defenseSession.updateMany({
+          where: { slot_id: { in: slotIds } },
+          data: { slot_id: null },
+        });
+        await tx.availabilitySlot.deleteMany({
+          where: { slot_id: { in: slotIds } },
+        });
+      }
+
+      await tx.committeeMember.deleteMany({
+        where: { committee_id: committeeId },
+      });
+
+      await tx.committee.delete({
+        where: { committee_id: committeeId },
+      });
+    });
+
+    return { success: true };
+  }
 }

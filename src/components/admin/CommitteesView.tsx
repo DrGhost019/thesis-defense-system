@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "../providers";
 import { getTranslations } from "@/lib/translations";
@@ -13,6 +13,7 @@ import {
   CheckCircle,
   Loader2,
   User,
+  X,
 } from "lucide-react";
 
 export function CommitteesView() {
@@ -26,7 +27,48 @@ export function CommitteesView() {
   const [addMemberCommId, setAddMemberCommId] = useState<number | null>(null);
   const [addMemberProfId, setAddMemberProfId] = useState<string>("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [successKey, setSuccessKey] = useState<"created" | "memberAdded" | "memberRemoved" | null>(null);
+  const [successKey, setSuccessKey] = useState<
+    "created" | "memberAdded" | "memberRemoved" | "activated" | "deactivated" | "deleted" | null
+  >(null);
+
+  // Auto-dismiss banners after 5 seconds (Requirement 2)
+  useEffect(() => {
+    if (successKey) {
+      const timer = setTimeout(() => {
+        setSuccessKey(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [successKey]);
+
+  useEffect(() => {
+    if (errorMessage) {
+      const timer = setTimeout(() => {
+        setErrorMessage(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [errorMessage]);
+
+  const parseErrorMessage = (err: any): string => {
+    const raw = err?.message || "";
+    if (
+      raw.includes("حداقل یک عضو") ||
+      raw.includes("at least one member") ||
+      raw.includes("RULE_VIOLATION")
+    ) {
+      return t.committees.minMembersError;
+    }
+    if (raw.includes("تکراری") || raw.includes("already exists") || raw.includes("CONFLICT")) {
+      return lang === "fa" ? "نام هیئت داوران تکراری است" : "A committee with this name already exists";
+    }
+    if (raw.includes("جلسات دفاع فعال") || raw.includes("active defense")) {
+      return lang === "fa"
+        ? "امکان حذف هیئت داوران دارای جلسات دفاع فعال وجود ندارد"
+        : "Cannot delete an evaluation committee with active defense sessions";
+    }
+    return raw || t.common.error;
+  };
 
   // Fetch committees
   const { data: commData, isLoading: commLoading } = useQuery({
@@ -69,7 +111,7 @@ export function CommitteesView() {
       queryClient.invalidateQueries({ queryKey: ["my-committees"] });
     },
     onError: (err: any) => {
-      setErrorMessage(err.message);
+      setErrorMessage(parseErrorMessage(err));
       setSuccessKey(null);
     },
   });
@@ -99,7 +141,7 @@ export function CommitteesView() {
       queryClient.invalidateQueries({ queryKey: ["admin-committees"] });
     },
     onError: (err: any) => {
-      setErrorMessage(err.message);
+      setErrorMessage(parseErrorMessage(err));
       setSuccessKey(null);
     },
   });
@@ -125,7 +167,7 @@ export function CommitteesView() {
       queryClient.invalidateQueries({ queryKey: ["admin-committees"] });
     },
     onError: (err: any) => {
-      setErrorMessage(err.message);
+      setErrorMessage(parseErrorMessage(err));
       setSuccessKey(null);
     },
   });
@@ -145,10 +187,37 @@ export function CommitteesView() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Failed to update committee");
+      return { data, is_active };
+    },
+    onSuccess: ({ is_active }) => {
+      setSuccessKey(is_active ? "activated" : "deactivated");
+      setErrorMessage(null);
+      queryClient.invalidateQueries({ queryKey: ["admin-committees"] });
+    },
+    onError: (err: any) => {
+      setErrorMessage(parseErrorMessage(err));
+      setSuccessKey(null);
+    },
+  });
+
+  const deleteCommitteeMutation = useMutation({
+    mutationFn: async (committeeId: number) => {
+      const res = await fetch(`/api/v1/committees/${committeeId}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Failed to delete committee");
       return data;
     },
     onSuccess: () => {
+      setSuccessKey("deleted");
+      setErrorMessage(null);
       queryClient.invalidateQueries({ queryKey: ["admin-committees"] });
+      queryClient.invalidateQueries({ queryKey: ["my-committees"] });
+    },
+    onError: (err: any) => {
+      setErrorMessage(parseErrorMessage(err));
+      setSuccessKey(null);
     },
   });
 
@@ -183,24 +252,46 @@ export function CommitteesView() {
       </div>
 
       {successKey && (
-        <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 text-xs sm:text-sm flex items-center gap-2">
-          <CheckCircle className="w-5 h-5 flex-shrink-0 text-emerald-600" />
-          <span>
-            {successKey === "created"
-              ? t.committees.createdSuccess
-              : successKey === "memberAdded"
-              ? t.committees.memberAddedSuccess
-              : successKey === "memberRemoved"
-              ? t.committees.memberRemovedSuccess
-              : t.common.success}
-          </span>
+        <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 text-xs sm:text-sm flex items-center justify-between gap-2 animate-in fade-in">
+          <div className="flex items-center gap-2">
+            <CheckCircle className="w-5 h-5 flex-shrink-0 text-emerald-600" />
+            <span>
+              {successKey === "created"
+                ? t.committees.createdSuccess
+                : successKey === "memberAdded"
+                ? t.committees.memberAddedSuccess
+                : successKey === "memberRemoved"
+                ? t.committees.memberRemovedSuccess
+                : successKey === "deactivated"
+                ? t.committees.deactivatedSuccess
+                : successKey === "activated"
+                ? t.committees.activatedSuccess
+                : successKey === "deleted"
+                ? t.committees.deletedSuccess
+                : t.common.success}
+            </span>
+          </div>
+          <button
+            onClick={() => setSuccessKey(null)}
+            className="text-emerald-600 hover:text-emerald-900 dark:text-emerald-400 dark:hover:text-emerald-200 p-1"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
       )}
 
       {errorMessage && (
-        <div className="p-4 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-xs sm:text-sm flex items-center gap-2">
-          <AlertCircle className="w-5 h-5 flex-shrink-0 text-red-600" />
-          <span>{errorMessage}</span>
+        <div className="p-4 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-xs sm:text-sm flex items-center justify-between gap-2 animate-in fade-in">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-5 h-5 flex-shrink-0 text-red-600" />
+            <span>{errorMessage}</span>
+          </div>
+          <button
+            onClick={() => setErrorMessage(null)}
+            className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-200 p-1"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
       )}
 
@@ -330,7 +421,7 @@ export function CommitteesView() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <span
                     className={`px-2.5 py-1 rounded-full text-[11px] font-bold ${
                       comm.is_active
@@ -342,12 +433,18 @@ export function CommitteesView() {
                   </span>
 
                   <button
-                    onClick={() =>
-                      toggleDeactivateMutation.mutate({
-                        committeeId: comm.committee_id,
-                        is_active: !comm.is_active,
-                      })
-                    }
+                    onClick={() => {
+                      const confirmMsg = comm.is_active
+                        ? t.committees.deactivateConfirm
+                        : t.committees.activateConfirm;
+                      if (confirm(confirmMsg)) {
+                        toggleDeactivateMutation.mutate({
+                          committeeId: comm.committee_id,
+                          is_active: !comm.is_active,
+                        });
+                      }
+                    }}
+                    disabled={toggleDeactivateMutation.isPending}
                     className="text-xs px-3 py-1 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 font-semibold text-slate-700 dark:text-slate-300 transition"
                   >
                     {comm.is_active
@@ -365,6 +462,20 @@ export function CommitteesView() {
                   >
                     <UserPlus className="w-3.5 h-3.5" />
                     <span>{t.committees.addMember}</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      if (confirm(t.committees.deleteConfirm)) {
+                        deleteCommitteeMutation.mutate(comm.committee_id);
+                      }
+                    }}
+                    disabled={deleteCommitteeMutation.isPending}
+                    className="text-xs px-3 py-1 rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 hover:bg-red-100 dark:hover:bg-red-900/60 font-semibold text-red-700 dark:text-red-300 flex items-center gap-1 transition shadow-sm"
+                    title={t.committees.deleteCommittee}
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>{t.committees.deleteCommittee}</span>
                   </button>
                 </div>
               </div>
@@ -384,6 +495,10 @@ export function CommitteesView() {
                       <span>{m.professor.user.full_name}</span>
                       <button
                         onClick={() => {
+                          if (comm.members?.length <= 1) {
+                            setErrorMessage(t.committees.minMembersError);
+                            return;
+                          }
                           if (
                             confirm(
                               lang === "fa"
@@ -397,8 +512,17 @@ export function CommitteesView() {
                             });
                           }
                         }}
-                        className="text-slate-400 hover:text-red-600 transition"
-                        title={t.committees.removeMember}
+                        disabled={comm.members?.length <= 1}
+                        className={`transition ${
+                          comm.members?.length <= 1
+                            ? "text-slate-300 dark:text-slate-600 cursor-not-allowed opacity-50"
+                            : "text-slate-400 hover:text-red-600"
+                        }`}
+                        title={
+                          comm.members?.length <= 1
+                            ? t.committees.minMembersError
+                            : t.committees.removeMember
+                        }
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>

@@ -320,6 +320,14 @@ export const translations = {
       memberRemovedSuccess: "عضو با موفقیت از هیئت داوران حذف شد",
       nameRequiredError: "نام هیئت داوران را وارد کنید",
       memberRequiredError: "حداقل یک استاد را انتخاب کنید",
+      deleteCommittee: "حذف هیئت داوران",
+      deleteConfirm: "آیا از حذف کامل این هیئت داوران اطمینان دارید؟ این عملیات غیرقابل بازگشت است.",
+      deletedSuccess: "هیئت داوران با موفقیت حذف شد",
+      deactivateConfirm: "آیا از غیرفعال‌سازی این هیئت داوران اطمینان دارید؟",
+      activateConfirm: "آیا از فعال‌سازی این هیئت داوران اطمینان دارید؟",
+      deactivatedSuccess: "هیئت داوران با موفقیت غیرفعال شد",
+      activatedSuccess: "هیئت داوران با موفقیت فعال شد",
+      minMembersError: "هیئت داوران باید حداقل یک عضو داشته باشد",
     },
 
     // Admin Accounts View
@@ -755,6 +763,14 @@ export const translations = {
       memberRemovedSuccess: "Member removed from committee",
       nameRequiredError: "Please enter committee name",
       memberRequiredError: "Please select at least one faculty member",
+      deleteCommittee: "Delete Committee",
+      deleteConfirm: "Are you sure you want to completely delete this committee? This action cannot be undone.",
+      deletedSuccess: "Committee deleted successfully",
+      deactivateConfirm: "Are you sure you want to deactivate this evaluation committee?",
+      activateConfirm: "Are you sure you want to activate this evaluation committee?",
+      deactivatedSuccess: "Evaluation committee deactivated successfully",
+      activatedSuccess: "Evaluation committee activated successfully",
+      minMembersError: "An evaluation committee must have at least one member",
     },
 
     // Admin Accounts View
