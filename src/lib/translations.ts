@@ -218,6 +218,8 @@ export const translations = {
       cancelForbiddenError: "تنها دانشجو یا اساتید داور این جلسه مجاز به لغو آن هستند",
       onlyAssignedOrConfirmedError: "فقط جلسات در وضعیت 'تخصیص‌یافته' یا 'تأییدشده' قابل لغو هستند",
       genericError: "خطا در پردازش درخواست دفاع",
+      activeRequestCaution: "توجه: شما یک درخواست دفاع فعال در جریان دارید",
+      cancelReasonMinCaution: "توجه: علت لغو باید حداقل ۵ کاراکتر باشد",
     },
 
     // My Slots View (Professors)
@@ -301,6 +303,7 @@ export const translations = {
       sessionStatus: "وضعیت جلسه:",
       allConfirmedSuccess: "با تأیید شما تمامی داوران جلسه را تایید کردند و جلسه قطعی شد",
       awaitingOthersSuccess: "تأیید شما ثبت شد؛ جلسه در انتظار تأیید سایر داوران است",
+      awaitingOthersCaution: "تأیید شما ثبت شد؛ جلسه در انتظار تأیید سایر داوران است",
       declinedSuccess: "جلسه دفاع با نظر منفی شما رد شد و تاریخ آزاد گردید",
       decisionRecordedSuccess: "نظر شما با موفقیت ثبت شد",
       seatNotFoundError: "کرسی داوری یافت نشد",
@@ -346,6 +349,7 @@ export const translations = {
       professorConflictError: "تداخل زمانی: حداقل یکی از اساتید داور در این تاریخ و ساعت جلسه دفاع دیگری دارد",
       declineReasonMinError: "علت رد درخواست باید حداقل ۵ کاراکتر باشد",
       slotAndDateRequiredError: "لطفاً ابتدا یک بازه زمانی خالی و یک تاریخ معتبر انتخاب کنید",
+      slotAndDateRequiredCaution: "توجه: لطفاً ابتدا یک بازه زمانی خالی و یک تاریخ معتبر انتخاب کنید",
     },
 
     // Admin Committees View
@@ -439,6 +443,10 @@ export const translations = {
       attempts: "دفعات تلاش:",
       errorReason: "علت خطا:",
       warningBadge: "نیازمند پیگیری",
+      refreshSuccess: "گزارش وضعیت اعلان‌ها با موفقیت به‌روزرسانی شد",
+      failedDeliveriesWarning: "هشدار: اعلان‌های ناموفق در صف تلاش مجدد نیازمند بررسی هستند",
+      unlinkedUsersCaution: "توجه: برخی از کاربران هنوز حساب پیام‌رسان بله خود را متصل نکرده‌اند",
+      allDeliveriesSuccessful: "تمامی اعلان‌ها با موفقیت تحویل داده شده و سیستم بدون خطا است",
     },
 
     // Messages View
@@ -732,6 +740,8 @@ export const translations = {
       cancelForbiddenError: "Only the student or assigned faculty members are authorized to cancel this session",
       onlyAssignedOrConfirmedError: "Only sessions in 'assigned' or 'confirmed' status can be cancelled",
       genericError: "An error occurred while processing the defense request",
+      activeRequestCaution: "Caution: You have an active defense request currently in progress",
+      cancelReasonMinCaution: "Caution: Cancellation reason must be at least 5 characters",
     },
 
     // My Slots View (Professors)
@@ -815,6 +825,7 @@ export const translations = {
       sessionStatus: "Session Status:",
       allConfirmedSuccess: "With your approval, all committee members confirmed the session and it is now finalized",
       awaitingOthersSuccess: "Your approval has been recorded; awaiting other committee members",
+      awaitingOthersCaution: "Your approval has been recorded; awaiting other committee members",
       declinedSuccess: "Defense session was declined with your vote and the date has been released",
       decisionRecordedSuccess: "Your decision has been recorded successfully",
       seatNotFoundError: "Evaluation seat not found",
@@ -860,6 +871,7 @@ export const translations = {
       professorConflictError: "Time conflict: at least one committee member has another defense session at this time",
       declineReasonMinError: "Decline reason must be at least 5 characters",
       slotAndDateRequiredError: "Please select an open availability slot and a valid date first",
+      slotAndDateRequiredCaution: "Caution: Please select an open availability slot and a valid date first",
     },
 
     // Admin Committees View
@@ -953,6 +965,10 @@ export const translations = {
       attempts: "Attempts:",
       errorReason: "Error Reason:",
       warningBadge: "Action Required",
+      refreshSuccess: "Notification and messenger reports refreshed successfully",
+      failedDeliveriesWarning: "Warning: Failed notifications in retry queue require attention",
+      unlinkedUsersCaution: "Caution: Some users have not linked their Bale Messenger accounts yet",
+      allDeliveriesSuccessful: "All notifications delivered successfully and system is operating normally",
     },
 
     // Messages View

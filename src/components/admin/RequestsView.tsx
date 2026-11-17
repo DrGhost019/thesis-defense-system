@@ -28,6 +28,7 @@ export function RequestsView() {
   const [declineReason, setDeclineReason] = useState<string>("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [cautionMessage, setCautionMessage] = useState<string | null>(null);
 
   // Auto-dismiss notifications after 5 seconds
   useEffect(() => {
@@ -47,6 +48,15 @@ export function RequestsView() {
       return () => clearTimeout(timer);
     }
   }, [errorMessage]);
+
+  useEffect(() => {
+    if (cautionMessage) {
+      const timer = setTimeout(() => {
+        setCautionMessage(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [cautionMessage]);
 
   const parseErrorMessage = (err: any): string => {
     const raw = String(err?.message || "");
@@ -79,6 +89,12 @@ export function RequestsView() {
     }
     if (raw.includes("بازه زمانی یافت نشد") || raw.includes("Time slot not found")) {
       return t.adminRequests.slotNotFoundError;
+    }
+    if (raw.includes("ابتدا وارد سیستم شوید") || raw.includes("authenticate")) {
+      return lang === "en" ? "Please authenticate first" : "ابتدا وارد سیستم شوید";
+    }
+    if (raw.includes("دسترسی مجاز نمی‌باشد") || raw.includes("forbidden") || raw.includes("FORBIDDEN")) {
+      return lang === "en" ? "Access forbidden" : "دسترسی مجاز نمی‌باشد";
     }
     if (lang === "en" && /[\u0600-\u06FF]/.test(raw)) {
       return "An error occurred while processing the request";
@@ -131,6 +147,7 @@ export function RequestsView() {
     onSuccess: () => {
       setSuccessMessage(t.adminRequests.assignedSuccess);
       setErrorMessage(null);
+      setCautionMessage(null);
       setSelectedSession(null);
       setSelectedSlotId("");
       setSelectedDate("");
@@ -140,6 +157,7 @@ export function RequestsView() {
     onError: (err: any) => {
       setErrorMessage(parseErrorMessage(err));
       setSuccessMessage(null);
+      setCautionMessage(null);
     },
   });
 
@@ -160,6 +178,7 @@ export function RequestsView() {
     onSuccess: () => {
       setSuccessMessage(t.adminRequests.declinedSuccess);
       setErrorMessage(null);
+      setCautionMessage(null);
       setDeclineModalSessionId(null);
       setDeclineReason("");
       setSelectedSession(null);
@@ -169,6 +188,7 @@ export function RequestsView() {
     onError: (err: any) => {
       setErrorMessage(parseErrorMessage(err));
       setSuccessMessage(null);
+      setCautionMessage(null);
     },
   });
 
@@ -221,6 +241,22 @@ export function RequestsView() {
         </div>
       )}
 
+      {cautionMessage && (
+        <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 text-amber-800 dark:text-amber-200 text-xs sm:text-sm flex items-center justify-between gap-2 animate-in fade-in">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-5 h-5 flex-shrink-0 text-amber-600" />
+            <span>{cautionMessage}</span>
+          </div>
+          <button
+            onClick={() => setCautionMessage(null)}
+            className="text-amber-600 hover:text-amber-900 dark:text-amber-400 dark:hover:text-amber-200 p-1"
+            title={t.datepicker.close}
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
       {/* Main Grid: Left Requests List / Right Detail and Assignment with Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Requests List (5 cols) */}
@@ -253,6 +289,7 @@ export function RequestsView() {
                       setSelectedSession(req);
                       setErrorMessage(null);
                       setSuccessMessage(null);
+                      setCautionMessage(null);
                     }}
                     className={`p-3.5 rounded-xl border cursor-pointer transition text-xs ${
                       isSelected
@@ -377,7 +414,9 @@ export function RequestsView() {
                 <button
                   onClick={() => {
                     if (!selectedSlotId || !selectedDate) {
-                      setErrorMessage(t.adminRequests.slotAndDateRequiredError);
+                      setCautionMessage(t.adminRequests.slotAndDateRequiredCaution);
+                      setErrorMessage(null);
+                      setSuccessMessage(null);
                       return;
                     }
                     assignMutation.mutate({

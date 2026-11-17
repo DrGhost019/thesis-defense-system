@@ -4,12 +4,24 @@ import prisma from "@/lib/prisma";
 import { apiSuccess, apiError } from "@/lib/api-response";
 
 export async function GET(req: NextRequest) {
+  const isEn =
+    req.headers.get("accept-language")?.startsWith("en") ||
+    req.nextUrl.searchParams.get("lang") === "en";
+
   const authUser = await getAuthenticatedUser(req);
   if (!authUser) {
-    return apiError("UNAUTHENTICATED", "ابتدا وارد سیستم شوید", 401);
+    return apiError(
+      "UNAUTHENTICATED",
+      isEn ? "Please authenticate first" : "ابتدا وارد سیستم شوید",
+      401
+    );
   }
   if (!hasRole(authUser, ["admin"])) {
-    return apiError("FORBIDDEN", "دسترسی مجاز نمی‌باشد", 403);
+    return apiError(
+      "FORBIDDEN",
+      isEn ? "Access forbidden" : "دسترسی مجاز نمی‌باشد",
+      403
+    );
   }
 
   const [failedNotifications, unlinkedUsers] = await Promise.all([

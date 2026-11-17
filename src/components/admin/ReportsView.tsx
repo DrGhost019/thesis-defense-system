@@ -1,26 +1,97 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "../providers";
 import { getTranslations } from "@/lib/translations";
-import { BellRing, RefreshCw, AlertTriangle, UserX, CheckCircle, Loader2 } from "lucide-react";
+import { BellRing, RefreshCw, AlertTriangle, UserX, CheckCircle, Loader2, X } from "lucide-react";
 
 export function ReportsView() {
   const { lang } = useAuth();
   const t = getTranslations(lang);
 
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [cautionMessage, setCautionMessage] = useState<string | null>(null);
+
+  // Auto-dismiss notifications after 5 seconds
+  useEffect(() => {
+    if (successMessage) {
+      const timer = setTimeout(() => {
+        setSuccessMessage(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [successMessage]);
+
+  useEffect(() => {
+    if (errorMessage) {
+      const timer = setTimeout(() => {
+        setErrorMessage(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [errorMessage]);
+
+  useEffect(() => {
+    if (cautionMessage) {
+      const timer = setTimeout(() => {
+        setCautionMessage(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [cautionMessage]);
+
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ["admin-reports"],
+    queryKey: ["admin-reports", lang],
     queryFn: async () => {
-      const res = await fetch("/api/v1/admin/reports");
-      if (!res.ok) throw new Error("Failed to load reports");
+      const res = await fetch("/api/v1/admin/reports", {
+        headers: { "Accept-Language": lang },
+      });
+      if (!res.ok) throw new Error(lang === "en" ? "Failed to load reports" : "خطا در بارگذاری گزارش‌ها");
       return res.json();
     },
   });
 
   const failedNotifications: any[] = data?.failedNotifications || [];
   const unlinkedUsers: any[] = data?.unlinkedUsers || [];
+
+  const handleRefresh = async () => {
+    try {
+      await refetch();
+      setSuccessMessage(t.reports.refreshSuccess);
+      setErrorMessage(null);
+      setCautionMessage(null);
+    } catch {
+      setErrorMessage(lang === "en" ? "Failed to load reports" : "خطا در بارگذاری گزارش‌ها");
+      setSuccessMessage(null);
+      setCautionMessage(null);
+    }
+  };
+
+  const formatFailureReason = (reason: string | null): string => {
+    if (!reason) return lang === "fa" ? "خطای ارسال به ربات بله" : "Bale Gateway Error";
+    if (lang === "fa") return reason;
+    if (reason.includes("توکن محرمانه") || reason.includes("token") || reason.includes("FORBIDDEN")) {
+      return "Invalid secret token";
+    }
+    if (reason.includes("یافت نشد") || reason.includes("not found")) {
+      return "Recipient or chat ID not found";
+    }
+    if (reason.includes("مسدود") || reason.includes("blocked")) {
+      return "Bot blocked by recipient";
+    }
+    if (reason.includes("هم‌پوشانی") || reason.includes("تداخل") || reason.includes("conflict")) {
+      return "Scheduling conflict";
+    }
+    if (reason.includes("خطای ارسال") || reason.includes("Send failed") || reason.includes("Delivery failed")) {
+      return "Delivery failed to Bale Messenger";
+    }
+    if (/[\u0600-\u06FF]/.test(reason)) {
+      return "Delivery failed to Bale Messenger";
+    }
+    return reason;
+  };
 
   return (
     <div className="space-y-6">
@@ -36,13 +107,58 @@ export function ReportsView() {
         </div>
 
         <button
-          onClick={() => refetch()}
+          onClick={handleRefresh}
           className="flex items-center gap-1.5 px-3.5 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-semibold transition"
         >
           <RefreshCw className="w-3.5 h-3.5" />
           <span>{t.common.refresh}</span>
         </button>
       </div>
+
+      {successMessage && (
+        <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 text-xs sm:text-sm flex items-center justify-between gap-2 animate-in fade-in">
+          <div className="flex items-center gap-2">
+            <CheckCircle className="w-5 h-5 flex-shrink-0 text-emerald-600" />
+            <span>{successMessage}</span>
+          </div>
+          <button
+            onClick={() => setSuccessMessage(null)}
+            className="text-emerald-600 hover:text-emerald-900 dark:text-emerald-400 dark:hover:text-emerald-200 p-1"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      {errorMessage && (
+        <div className="p-4 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-xs sm:text-sm flex items-center justify-between gap-2 animate-in fade-in">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-5 h-5 flex-shrink-0 text-red-600" />
+            <span>{errorMessage}</span>
+          </div>
+          <button
+            onClick={() => setErrorMessage(null)}
+            className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-200 p-1"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      {cautionMessage && (
+        <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 text-amber-800 dark:text-amber-200 text-xs sm:text-sm flex items-center justify-between gap-2 animate-in fade-in">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-5 h-5 flex-shrink-0 text-amber-600" />
+            <span>{cautionMessage}</span>
+          </div>
+          <button
+            onClick={() => setCautionMessage(null)}
+            className="text-amber-600 hover:text-amber-900 dark:text-amber-400 dark:hover:text-amber-200 p-1"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Failed Notifications */}
@@ -54,6 +170,22 @@ export function ReportsView() {
                 {t.reports.failedDeliveriesTitle} ({failedNotifications.length})
               </span>
             </h3>
+            {failedNotifications.length > 0 && (
+              <button
+                onClick={() => {
+                  setErrorMessage(
+                    lang === "en"
+                      ? `Warning: ${failedNotifications.length} notification${failedNotifications.length > 1 ? "s" : ""} failed delivery and pending retry`
+                      : `هشدار: ${failedNotifications.length} اعلان با خطای ارسال مواجه شده است`
+                  );
+                  setSuccessMessage(null);
+                  setCautionMessage(null);
+                }}
+                className="text-[11px] font-semibold text-red-600 hover:text-red-700 dark:text-red-400"
+              >
+                {t.reports.warningBadge}
+              </button>
+            )}
           </div>
 
           {isLoading ? (
@@ -89,8 +221,7 @@ export function ReportsView() {
                       : "Daily Reminder"}
                   </div>
                   <div className="text-red-500 dark:text-red-400 font-mono text-[11px]">
-                    {t.reports.errorReason}{" "}
-                    {notif.failure_reason || (lang === "fa" ? "خطای ارسال به ربات بله" : "Gateway Error")}
+                    {t.reports.errorReason} {formatFailureReason(notif.failure_reason)}
                   </div>
                 </div>
               ))}
@@ -107,6 +238,22 @@ export function ReportsView() {
                 {t.reports.unlinkedUsersTitle} ({unlinkedUsers.length})
               </span>
             </h3>
+            {unlinkedUsers.length > 0 && (
+              <button
+                onClick={() => {
+                  setCautionMessage(
+                    lang === "en"
+                      ? `Caution: ${unlinkedUsers.length} user${unlinkedUsers.length > 1 ? "s" : ""} have not linked their Bale Messenger accounts`
+                      : `توجه: ${unlinkedUsers.length} کاربر هنوز به پیام‌رسان بله متصل نشده‌اند`
+                  );
+                  setSuccessMessage(null);
+                  setErrorMessage(null);
+                }}
+                className="text-[11px] font-semibold text-amber-600 hover:text-amber-700 dark:text-amber-400"
+              >
+                {t.reports.warningBadge}
+              </button>
+            )}
           </div>
 
           {isLoading ? (

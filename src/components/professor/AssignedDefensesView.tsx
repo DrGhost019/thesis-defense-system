@@ -23,6 +23,7 @@ export function AssignedDefensesView() {
   const queryClient = useQueryClient();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [cautionMessage, setCautionMessage] = useState<string | null>(null);
 
   // Auto-dismiss notifications after 5 seconds
   useEffect(() => {
@@ -43,6 +44,15 @@ export function AssignedDefensesView() {
     }
   }, [errorMessage]);
 
+  useEffect(() => {
+    if (cautionMessage) {
+      const timer = setTimeout(() => {
+        setCautionMessage(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [cautionMessage]);
+
   const parseErrorMessage = (err: any): string => {
     const raw = String(err?.message || "");
     if (raw.includes("کرسی داوری یافت نشد") || raw.includes("not found")) {
@@ -57,6 +67,12 @@ export function AssignedDefensesView() {
     if (raw.includes("قبلاً ثبت شده") || raw.includes("already been recorded")) {
       return t.assignedDefenses.decisionAlreadyRecordedError;
     }
+    if (raw.includes("ابتدا وارد سیستم شوید") || raw.includes("authenticate")) {
+      return lang === "en" ? "Please authenticate first" : "ابتدا وارد سیستم شوید";
+    }
+    if (raw.includes("دسترسی مجاز نمی‌باشد") || raw.includes("Access forbidden")) {
+      return lang === "en" ? "Access forbidden" : "دسترسی مجاز نمی‌باشد";
+    }
     if (lang === "en" && /[\u0600-\u06FF]/.test(raw)) {
       return t.assignedDefenses.genericError;
     }
@@ -64,10 +80,12 @@ export function AssignedDefensesView() {
   };
 
   const { data, isLoading } = useQuery({
-    queryKey: ["assigned-seats"],
+    queryKey: ["assigned-seats", lang],
     queryFn: async () => {
-      const res = await fetch("/api/v1/seats/mine");
-      if (!res.ok) throw new Error("Failed to load seats");
+      const res = await fetch("/api/v1/seats/mine", {
+        headers: { "Accept-Language": lang },
+      });
+      if (!res.ok) throw new Error(lang === "en" ? "Failed to load assigned defense sessions" : "خطا در بارگذاری جلسات محول‌شده");
       return res.json();
     },
   });
@@ -87,22 +105,26 @@ export function AssignedDefensesView() {
       return resData;
     },
     onSuccess: (resData) => {
+      setErrorMessage(null);
+      setSuccessMessage(null);
+      setCautionMessage(null);
+
       if (resData.sessionStatus === "confirmed") {
         setSuccessMessage(t.assignedDefenses.allConfirmedSuccess);
       } else if (resData.seatStatus === "rejected") {
-        setSuccessMessage(t.assignedDefenses.declinedSuccess);
+        setErrorMessage(t.assignedDefenses.declinedSuccess);
       } else if (resData.seatStatus === "approved") {
-        setSuccessMessage(t.assignedDefenses.awaitingOthersSuccess);
+        setCautionMessage(t.assignedDefenses.awaitingOthersCaution);
       } else {
         setSuccessMessage(t.assignedDefenses.decisionRecordedSuccess);
       }
-      setErrorMessage(null);
       queryClient.invalidateQueries({ queryKey: ["assigned-seats"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
     },
     onError: (err: any) => {
       setErrorMessage(parseErrorMessage(err));
       setSuccessMessage(null);
+      setCautionMessage(null);
     },
   });
 
@@ -144,6 +166,21 @@ export function AssignedDefensesView() {
           <button
             onClick={() => setErrorMessage(null)}
             className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-200 p-1"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      {cautionMessage && (
+        <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 text-amber-800 dark:text-amber-200 text-xs sm:text-sm flex items-center justify-between gap-2 animate-in fade-in">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-5 h-5 flex-shrink-0 text-amber-600" />
+            <span>{cautionMessage}</span>
+          </div>
+          <button
+            onClick={() => setCautionMessage(null)}
+            className="text-amber-600 hover:text-amber-900 dark:text-amber-400 dark:hover:text-amber-200 p-1"
           >
             <X className="w-4 h-4" />
           </button>

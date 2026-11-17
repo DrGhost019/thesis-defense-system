@@ -24,9 +24,11 @@ export function DashboardView({ onNavigate }: { onNavigate: (tab: TabId) => void
   const t = getTranslations(lang);
 
   const { data } = useQuery({
-    queryKey: ["dashboard"],
+    queryKey: ["dashboard", lang],
     queryFn: async () => {
-      const res = await fetch("/api/v1/me/dashboard");
+      const res = await fetch("/api/v1/me/dashboard", {
+        headers: { "Accept-Language": lang },
+      });
       if (!res.ok) throw new Error("Failed to load dashboard data");
       return res.json();
     },
@@ -125,7 +127,7 @@ export function DashboardView({ onNavigate }: { onNavigate: (tab: TabId) => void
                     n.type === "action_required"
                       ? "bg-amber-50 dark:bg-amber-950/40 border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-200"
                       : n.type === "warning"
-                      ? "bg-blue-50 dark:bg-blue-950/40 border-blue-300 dark:border-blue-800 text-blue-900 dark:text-blue-200"
+                      ? "bg-red-50 dark:bg-red-950/40 border-red-300 dark:border-red-800 text-red-900 dark:text-red-200"
                       : "bg-emerald-50 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-800 text-emerald-900 dark:text-emerald-200"
                   }`}
                 >

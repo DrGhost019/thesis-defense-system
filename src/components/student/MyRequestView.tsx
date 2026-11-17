@@ -33,6 +33,7 @@ export function MyRequestView({
   const [cancelReason, setCancelReason] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [cautionMessage, setCautionMessage] = useState<string | null>(null);
 
   // Auto-dismiss notifications after 5 seconds
   useEffect(() => {
@@ -52,6 +53,15 @@ export function MyRequestView({
       return () => clearTimeout(timer);
     }
   }, [errorMessage]);
+
+  useEffect(() => {
+    if (cautionMessage) {
+      const timer = setTimeout(() => {
+        setCautionMessage(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [cautionMessage]);
 
   const parseErrorMessage = (err: any): string => {
     const raw = String(err?.message || "");
@@ -73,6 +83,12 @@ export function MyRequestView({
     if (raw.includes("فقط جلسات در وضعیت") || raw.includes("status")) {
       return t.student.onlyAssignedOrConfirmedError;
     }
+    if (raw.includes("ابتدا وارد سیستم شوید") || raw.includes("authenticate")) {
+      return lang === "en" ? "Please authenticate first" : "ابتدا وارد سیستم شوید";
+    }
+    if (raw.includes("دسترسی مجاز نمی‌باشد") || raw.includes("Access forbidden")) {
+      return lang === "en" ? "Access forbidden" : "دسترسی مجاز نمی‌باشد";
+    }
     if (lang === "en" && /[\u0600-\u06FF]/.test(raw)) {
       return t.student.genericError;
     }
@@ -80,10 +96,12 @@ export function MyRequestView({
   };
 
   const { data } = useQuery({
-    queryKey: ["my-requests"],
+    queryKey: ["my-requests", lang],
     queryFn: async () => {
-      const res = await fetch("/api/v1/requests/mine");
-      if (!res.ok) throw new Error("Failed to load requests");
+      const res = await fetch("/api/v1/requests/mine", {
+        headers: { "Accept-Language": lang },
+      });
+      if (!res.ok) throw new Error(lang === "en" ? "Failed to load defense requests" : "خطا در بارگذاری درخواست‌های دفاع");
       return res.json();
     },
   });
@@ -106,12 +124,14 @@ export function MyRequestView({
       setNote("");
       setSuccessMessage(t.student.requestSubmittedSuccess);
       setErrorMessage(null);
+      setCautionMessage(null);
       queryClient.invalidateQueries({ queryKey: ["my-requests"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
     },
     onError: (err: any) => {
       setErrorMessage(parseErrorMessage(err));
       setSuccessMessage(null);
+      setCautionMessage(null);
     },
   });
 
@@ -134,12 +154,14 @@ export function MyRequestView({
       setCancelReason("");
       setSuccessMessage(t.student.sessionCancelledSuccess);
       setErrorMessage(null);
+      setCautionMessage(null);
       queryClient.invalidateQueries({ queryKey: ["my-requests"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
     },
     onError: (err: any) => {
       setErrorMessage(parseErrorMessage(err));
       setSuccessMessage(null);
+      setCautionMessage(null);
     },
   });
 
@@ -264,6 +286,21 @@ export function MyRequestView({
           <button
             onClick={() => setErrorMessage(null)}
             className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-200 p-1"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      {cautionMessage && (
+        <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 text-amber-800 dark:text-amber-200 text-xs sm:text-sm flex items-center justify-between gap-2 animate-in fade-in">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-5 h-5 flex-shrink-0 text-amber-600" />
+            <span>{cautionMessage}</span>
+          </div>
+          <button
+            onClick={() => setCautionMessage(null)}
+            className="text-amber-600 hover:text-amber-900 dark:text-amber-400 dark:hover:text-amber-200 p-1"
           >
             <X className="w-4 h-4" />
           </button>
@@ -552,12 +589,18 @@ export function MyRequestView({
               </button>
               <button
                 type="button"
-                onClick={() =>
+                onClick={() => {
+                  if (cancelReason.trim().length < 5) {
+                    setCautionMessage(t.student.cancelReasonMinCaution);
+                    setErrorMessage(null);
+                    setSuccessMessage(null);
+                    return;
+                  }
                   cancelMutation.mutate({
                     sessionId: cancelModalSessionId,
                     reason: cancelReason,
-                  })
-                }
+                  });
+                }}
                 disabled={cancelMutation.isPending}
                 className="px-4 py-2 rounded-xl text-xs font-bold bg-red-600 hover:bg-red-700 text-white transition shadow-sm"
               >
