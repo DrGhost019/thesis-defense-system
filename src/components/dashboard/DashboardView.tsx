@@ -123,7 +123,8 @@ export function DashboardView({ onNavigate }: { onNavigate: (tab: TabId) => void
               return (
                 <div
                   key={n.id}
-                  className={`p-4 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs sm:text-sm shadow-2xs ${
+                  dir={lang === "fa" ? "rtl" : "ltr"}
+                  className={`p-4 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs sm:text-sm shadow-2xs text-left rtl:text-right ${
                     n.type === "action_required"
                       ? "bg-amber-50 dark:bg-amber-950/40 border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-200"
                       : n.type === "warning"
@@ -131,7 +132,7 @@ export function DashboardView({ onNavigate }: { onNavigate: (tab: TabId) => void
                       : "bg-emerald-50 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-800 text-emerald-900 dark:text-emerald-200"
                   }`}
                 >
-                  <div>
+                  <div className="text-left rtl:text-right">
                     <div className="font-bold">{noticeTitle}</div>
                     <div className="text-xs opacity-90 mt-0.5">{noticeText}</div>
                   </div>

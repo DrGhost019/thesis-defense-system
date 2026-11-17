@@ -287,6 +287,7 @@ export function DatePicker({
       {/* Popover Dropdown */}
       {isOpen && (
         <div
+          dir={lang === "fa" ? "rtl" : "ltr"}
           className={`absolute z-50 mt-1.5 w-72 sm:w-80 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-3.5 shadow-2xl animate-in fade-in zoom-in-95 duration-150 ${
             lang === "fa" ? "right-0" : "left-0"
           }`}

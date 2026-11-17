@@ -226,15 +226,19 @@ export function MessagesView({ initialSessionId }: { initialSessionId?: number }
           {/* Message Input Box */}
           <div className="p-3 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 rounded-b-2xl">
             {errorMessage && (
-              <div className="p-3 mb-2 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-xs flex items-center justify-between gap-2 animate-in fade-in">
+              <div
+                dir={lang === "fa" ? "rtl" : "ltr"}
+                className="p-3 mb-2 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-xs flex items-center justify-between gap-2 animate-in fade-in text-left rtl:text-right"
+              >
                 <div className="flex items-center gap-1.5">
                   <AlertTriangle className="w-4 h-4 flex-shrink-0 text-red-600" />
-                  <span>{errorMessage}</span>
+                  <span className="text-left rtl:text-right">{errorMessage}</span>
                 </div>
                 <button
                   type="button"
                   onClick={() => setErrorMessage(null)}
                   className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-200 p-0.5"
+                  title={t.datepicker.close}
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>

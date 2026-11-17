@@ -57,7 +57,7 @@ export function Navigation({
     items = [
       { id: "dashboard", labelFa: "داشبورد", labelEn: "Dashboard", icon: LayoutDashboard },
       { id: "schedule", labelFa: "برنامه هفتگی", labelEn: "Weekly Schedule", icon: CalendarDays },
-      { id: "my-request", labelFa: "درخواست دفاع من", labelEn: "My Request", icon: FileText },
+      { id: "my-request", labelFa: "درخواست دفاع من", labelEn: "My Defense Request", icon: FileText },
       { id: "messages", labelFa: "پیام‌ها", labelEn: "Messages", icon: MessageSquare },
       { id: "profile", labelFa: "پروفایل و اتصال بله", labelEn: "Profile & Bale", icon: User },
     ];
@@ -69,7 +69,7 @@ export function Navigation({
       {
         id: "assigned-defenses",
         labelFa: "جلسات محول‌شده",
-        labelEn: "Assigned Defenses",
+        labelEn: "Scheduled Meetings",
         icon: CheckSquare,
         badge: pendingCounts?.pendingDefenses,
       },
@@ -82,7 +82,7 @@ export function Navigation({
       {
         id: "requests",
         labelFa: "درخواست‌های دفاع و تخصیص",
-        labelEn: "Defense Requests",
+        labelEn: "Defense Requests and Allocation",
         icon: FileText,
         badge: pendingCounts?.pendingRequests,
       },
@@ -92,7 +92,7 @@ export function Navigation({
       {
         id: "reports",
         labelFa: "گزارش بله و اعلان‌ها",
-        labelEn: "Bale Reports",
+        labelEn: "Reports & Notifications",
         icon: BellRing,
         badge: pendingCounts?.failedNotifications,
       },

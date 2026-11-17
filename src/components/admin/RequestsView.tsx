@@ -212,14 +212,18 @@ export function RequestsView() {
       </div>
 
       {successMessage && (
-        <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 text-xs sm:text-sm flex items-center justify-between gap-2 animate-in fade-in">
+        <div
+          dir={lang === "fa" ? "rtl" : "ltr"}
+          className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 text-xs sm:text-sm flex items-center justify-between gap-2 animate-in fade-in text-left rtl:text-right"
+        >
           <div className="flex items-center gap-2">
             <CheckCircle className="w-5 h-5 flex-shrink-0 text-emerald-600" />
-            <span>{successMessage}</span>
+            <span className="text-left rtl:text-right">{successMessage}</span>
           </div>
           <button
             onClick={() => setSuccessMessage(null)}
-            className="text-emerald-600 hover:text-emerald-900 dark:text-emerald-400 dark:hover:text-emerald-200 p-1"
+            className="text-emerald-600 hover:text-emerald-900 dark:text-emerald-400 dark:hover:text-emerald-200 p-1 flex-shrink-0"
+            title={t.datepicker.close}
           >
             <X className="w-4 h-4" />
           </button>
@@ -227,14 +231,18 @@ export function RequestsView() {
       )}
 
       {errorMessage && (
-        <div className="p-4 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-xs sm:text-sm flex items-center justify-between gap-2 animate-in fade-in">
+        <div
+          dir={lang === "fa" ? "rtl" : "ltr"}
+          className="p-4 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-xs sm:text-sm flex items-center justify-between gap-2 animate-in fade-in text-left rtl:text-right"
+        >
           <div className="flex items-center gap-2">
             <AlertTriangle className="w-5 h-5 flex-shrink-0 text-red-600" />
-            <span>{errorMessage}</span>
+            <span className="text-left rtl:text-right">{errorMessage}</span>
           </div>
           <button
             onClick={() => setErrorMessage(null)}
-            className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-200 p-1"
+            className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-200 p-1 flex-shrink-0"
+            title={t.datepicker.close}
           >
             <X className="w-4 h-4" />
           </button>
@@ -242,14 +250,17 @@ export function RequestsView() {
       )}
 
       {cautionMessage && (
-        <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 text-amber-800 dark:text-amber-200 text-xs sm:text-sm flex items-center justify-between gap-2 animate-in fade-in">
+        <div
+          dir={lang === "fa" ? "rtl" : "ltr"}
+          className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 text-amber-800 dark:text-amber-200 text-xs sm:text-sm flex items-center justify-between gap-2 animate-in fade-in text-left rtl:text-right"
+        >
           <div className="flex items-center gap-2">
             <AlertTriangle className="w-5 h-5 flex-shrink-0 text-amber-600" />
-            <span>{cautionMessage}</span>
+            <span className="text-left rtl:text-right">{cautionMessage}</span>
           </div>
           <button
             onClick={() => setCautionMessage(null)}
-            className="text-amber-600 hover:text-amber-900 dark:text-amber-400 dark:hover:text-amber-200 p-1"
+            className="text-amber-600 hover:text-amber-900 dark:text-amber-400 dark:hover:text-amber-200 p-1 flex-shrink-0"
             title={t.datepicker.close}
           >
             <X className="w-4 h-4" />
@@ -498,7 +509,10 @@ export function RequestsView() {
       {/* Decline Reason Modal */}
       {declineModalSessionId && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 max-w-md w-full shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4">
+          <div
+            dir={lang === "fa" ? "rtl" : "ltr"}
+            className="bg-white dark:bg-slate-900 rounded-2xl p-6 max-w-md w-full shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4 text-left rtl:text-right"
+          >
             <h4 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
               <XCircle className="w-5 h-5 text-red-600" />
               <span>{t.adminRequests.declineModalTitle}</span>

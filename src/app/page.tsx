@@ -86,7 +86,10 @@ export default function HomePage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col font-sans transition-colors duration-200">
+    <div
+      dir={lang === "fa" ? "rtl" : "ltr"}
+      className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col font-sans transition-colors duration-200"
+    >
       {/* Top Header Navbar */}
       <Navbar />
 

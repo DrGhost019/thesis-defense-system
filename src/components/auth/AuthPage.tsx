@@ -290,7 +290,10 @@ export function AuthPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-blue-950 flex flex-col justify-center py-10 px-4 sm:px-6 lg:px-8 font-sans relative">
+    <div
+      dir={lang === "fa" ? "rtl" : "ltr"}
+      className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-blue-950 flex flex-col justify-center py-10 px-4 sm:px-6 lg:px-8 font-sans relative"
+    >
       {/* Top Controls: Language & Theme Toggle */}
       <div className="absolute top-4 left-4 z-20 flex items-center gap-2">
         <button
@@ -350,15 +353,18 @@ export function AuthPage() {
 
           {/* CAPTCHA Error Notification Banner (Auto-dismisses after 5 seconds) */}
           {captchaError && (
-            <div className="mb-4 p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200 flex items-center justify-between gap-2.5 text-xs sm:text-sm animate-in fade-in">
+            <div
+              dir={lang === "fa" ? "rtl" : "ltr"}
+              className="mb-4 p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200 flex items-center justify-between gap-2.5 text-xs sm:text-sm animate-in fade-in text-left rtl:text-right"
+            >
               <div className="flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 flex-shrink-0 text-amber-600 dark:text-amber-400" />
-                <span>{captchaError}</span>
+                <span className="text-left rtl:text-right">{captchaError}</span>
               </div>
               <button
                 type="button"
                 onClick={() => setCaptchaError(null)}
-                className="text-amber-600 hover:text-amber-900 dark:text-amber-400 dark:hover:text-amber-200 p-0.5 rounded transition"
+                className="text-amber-600 hover:text-amber-900 dark:text-amber-400 dark:hover:text-amber-200 p-0.5 rounded transition flex-shrink-0"
                 title={lang === "fa" ? "بستن" : "Close"}
               >
                 <X className="w-4 h-4" />
@@ -368,15 +374,18 @@ export function AuthPage() {
 
           {/* Username / Password / Server Error Notification (Does NOT auto-dismiss) */}
           {authError && (
-            <div className="mb-4 p-3 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 flex items-start justify-between gap-2.5 text-xs sm:text-sm animate-in fade-in">
+            <div
+              dir={lang === "fa" ? "rtl" : "ltr"}
+              className="mb-4 p-3 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 flex items-start justify-between gap-2.5 text-xs sm:text-sm animate-in fade-in text-left rtl:text-right"
+            >
               <div className="flex items-start gap-2">
                 <AlertCircle className="w-5 h-5 flex-shrink-0 text-red-500 mt-0.5" />
-                <div>{getLocalizedAuthError(authError)}</div>
+                <div className="text-left rtl:text-right">{getLocalizedAuthError(authError)}</div>
               </div>
               <button
                 type="button"
                 onClick={() => setAuthError(null)}
-                className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-200 p-0.5 rounded transition"
+                className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-200 p-0.5 rounded transition flex-shrink-0"
                 title={lang === "fa" ? "بستن" : "Close"}
               >
                 <X className="w-4 h-4" />

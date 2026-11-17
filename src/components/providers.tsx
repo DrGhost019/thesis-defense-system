@@ -101,6 +101,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       localStorage.setItem("app_lang", newLang);
       document.documentElement.dir = newLang === "fa" ? "rtl" : "ltr";
       document.documentElement.lang = newLang;
+      document.body.dir = newLang === "fa" ? "rtl" : "ltr";
     }
   };
 
@@ -126,6 +127,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       setLangState(savedLang);
       document.documentElement.dir = savedLang === "fa" ? "rtl" : "ltr";
       document.documentElement.lang = savedLang;
+      document.body.dir = savedLang === "fa" ? "rtl" : "ltr";
 
       const savedTheme = (localStorage.getItem("app_theme") as "light" | "dark") || "light";
       setThemeState(savedTheme);

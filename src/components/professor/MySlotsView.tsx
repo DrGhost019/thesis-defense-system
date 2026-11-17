@@ -261,10 +261,13 @@ export function MySlotsView() {
       </div>
 
       {successKey && (
-        <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 text-xs sm:text-sm flex items-center justify-between gap-2 animate-in fade-in">
+        <div
+          dir={lang === "fa" ? "rtl" : "ltr"}
+          className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 text-xs sm:text-sm flex items-center justify-between gap-2 animate-in fade-in text-left rtl:text-right"
+        >
           <div className="flex items-center gap-2">
             <CheckCircle className="w-5 h-5 flex-shrink-0 text-emerald-600" />
-            <span>
+            <span className="text-left rtl:text-right">
               {successKey === "created"
                 ? t.slots.createSuccess
                 : successKey === "withdrawn"
@@ -274,7 +277,7 @@ export function MySlotsView() {
           </div>
           <button
             onClick={() => setSuccessKey(null)}
-            className="text-emerald-600 hover:text-emerald-900 dark:text-emerald-400 dark:hover:text-emerald-200 p-1"
+            className="text-emerald-600 hover:text-emerald-900 dark:text-emerald-400 dark:hover:text-emerald-200 p-1 flex-shrink-0"
             title={t.datepicker.close}
           >
             <X className="w-4 h-4" />
@@ -283,14 +286,17 @@ export function MySlotsView() {
       )}
 
       {errorMessage && (
-        <div className="p-4 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-xs sm:text-sm flex items-center justify-between gap-2 animate-in fade-in">
+        <div
+          dir={lang === "fa" ? "rtl" : "ltr"}
+          className="p-4 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-xs sm:text-sm flex items-center justify-between gap-2 animate-in fade-in text-left rtl:text-right"
+        >
           <div className="flex items-center gap-2">
             <AlertCircle className="w-5 h-5 flex-shrink-0 text-red-600" />
-            <span>{errorMessage}</span>
+            <span className="text-left rtl:text-right">{errorMessage}</span>
           </div>
           <button
             onClick={() => setErrorMessage(null)}
-            className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-200 p-1"
+            className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-200 p-1 flex-shrink-0"
             title={t.datepicker.close}
           >
             <X className="w-4 h-4" />
