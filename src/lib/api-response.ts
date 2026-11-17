@@ -29,7 +29,18 @@ export function apiError(code: ApiErrorCode, message: string, status: number = 4
   return NextResponse.json(body, { status });
 }
 
-export function handleZodError(error: ZodError) {
+export function handleZodError(error: ZodError, reqOrIsEn?: any) {
+  let isEn = false;
+  if (typeof reqOrIsEn === "boolean") {
+    isEn = reqOrIsEn;
+  } else if (reqOrIsEn && typeof reqOrIsEn === "object") {
+    if (typeof reqOrIsEn.headers?.get === "function") {
+      isEn =
+        reqOrIsEn.headers.get("accept-language")?.startsWith("en") ||
+        reqOrIsEn.nextUrl?.searchParams?.get("lang") === "en";
+    }
+  }
+
   const fieldErrors: Record<string, string[]> = {};
   for (const issue of error.issues) {
     const field = issue.path.join(".");
@@ -38,5 +49,10 @@ export function handleZodError(error: ZodError) {
     }
     fieldErrors[field].push(issue.message);
   }
-  return apiError("VALIDATION_ERROR", "داده‌های ارسالی نامعتبر است", 422, fieldErrors);
+  return apiError(
+    "VALIDATION_ERROR",
+    isEn ? "Invalid input data" : "داده‌های ارسالی نامعتبر است",
+    422,
+    fieldErrors
+  );
 }

@@ -217,6 +217,7 @@ export const translations = {
       sessionNotFoundError: "جلسه دفاع یافت نشد",
       cancelForbiddenError: "تنها دانشجو یا اساتید داور این جلسه مجاز به لغو آن هستند",
       onlyAssignedOrConfirmedError: "فقط جلسات در وضعیت 'تخصیص‌یافته' یا 'تأییدشده' قابل لغو هستند",
+      genericError: "خطا در پردازش درخواست دفاع",
     },
 
     // My Slots View (Professors)
@@ -274,6 +275,7 @@ export const translations = {
       noMatchingDaysError: "بازه انتخابی شامل هیچ روز کاری منطبق بر الگو نیست",
       slotNotFoundError: "بازه زمانی مورد نظر یافت نشد",
       withdrawForbiddenError: "شما اجازه لغو این بازه زمانی را ندارید",
+      maxValidityError: "بازه اعتبار تکرار نمی‌تواند بیش از ۱۲ ماه باشد",
       genericError: "خطا در پردازش درخواست بازه زمانی",
     },
 
@@ -305,6 +307,7 @@ export const translations = {
       forbiddenSeatError: "شما اجازه ثبت نظر برای این کرسی را ندارید",
       notInAssignedStatusError: "این جلسه دیگر در وضعیت انتظار تایید اساتید نیست",
       decisionAlreadyRecordedError: "نظر شما برای این جلسه قبلاً ثبت شده است و قابل تغییر نیست",
+      genericError: "خطا در ثبت یا پردازش نظر داوری جلسه دفاع",
     },
 
     // Admin Requests View
@@ -728,6 +731,7 @@ export const translations = {
       sessionNotFoundError: "Defense session not found",
       cancelForbiddenError: "Only the student or assigned faculty members are authorized to cancel this session",
       onlyAssignedOrConfirmedError: "Only sessions in 'assigned' or 'confirmed' status can be cancelled",
+      genericError: "An error occurred while processing the defense request",
     },
 
     // My Slots View (Professors)
@@ -785,6 +789,7 @@ export const translations = {
       noMatchingDaysError: "The selected interval contains no working days matching the pattern",
       slotNotFoundError: "Availability slot not found",
       withdrawForbiddenError: "You are not authorized to withdraw this slot",
+      maxValidityError: "Recurring slot validity cannot exceed 12 months",
       genericError: "An error occurred while processing the availability slot",
     },
 
@@ -816,6 +821,7 @@ export const translations = {
       forbiddenSeatError: "You are not authorized to submit a decision for this seat",
       notInAssignedStatusError: "This session is no longer awaiting faculty confirmation",
       decisionAlreadyRecordedError: "Your decision for this session has already been recorded and cannot be changed",
+      genericError: "An error occurred while processing the defense decision",
     },
 
     // Admin Requests View

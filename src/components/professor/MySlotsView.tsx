@@ -96,6 +96,9 @@ export function MySlotsView() {
     if (raw.includes("قبل از تاریخ شروع") || raw.includes("before start date")) {
       return t.slots.invalidDateRangeError;
     }
+    if (raw.includes("۱۲ ماه") || raw.includes("12 months") || raw.includes("exceed 12 months")) {
+      return t.slots.maxValidityError;
+    }
     if (raw.includes("هیچ روز کاری") || raw.includes("no working days")) {
       return t.slots.noMatchingDaysError;
     }
@@ -154,7 +157,10 @@ export function MySlotsView() {
     mutationFn: async (payload: any) => {
       const res = await fetch("/api/v1/slots", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Accept-Language": lang,
+        },
         body: JSON.stringify(payload),
       });
       const data = await res.json();
@@ -178,6 +184,9 @@ export function MySlotsView() {
     mutationFn: async (slotId: number) => {
       const res = await fetch(`/api/v1/slots/${slotId}/withdraw`, {
         method: "POST",
+        headers: {
+          "Accept-Language": lang,
+        },
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Failed to withdraw slot");
@@ -543,7 +552,7 @@ export function MySlotsView() {
                             ? t.slots.evenDaysPattern
                             : slot.recurrence_pattern === "odd_days"
                             ? t.slots.oddDaysPattern
-                            : `${t.slots.weeklyPattern} (${slot.weekday})`}{" "}
+                            : `${t.slots.weeklyPattern} (${t.schedule.days[slot.weekday as keyof typeof t.schedule.days] || slot.weekday})`}{" "}
                           ({lang === "fa" ? "از" : "from"}{" "}
                           {calendarType === "jalali"
                             ? formatToJalali(slot.valid_from.slice(0, 10))

@@ -31,12 +31,24 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     const body = await req.json().catch(() => ({}));
     const parsed = CancelSessionSchema.safeParse(body);
     if (!parsed.success) {
-      return handleZodError(parsed.error);
+      return handleZodError(parsed.error, isEn);
     }
 
     const result = await CancellationService.cancel(sessionId, authUser.userId, parsed.data.reason);
     if (!result.success) {
-      return apiError(result.code as any, result.message!, result.status || 400);
+      let errMsg = result.message || "";
+      if (isEn) {
+        if (errMsg.includes("یافت نشد")) {
+          errMsg = "Defense session not found";
+        } else if (errMsg.includes("وضعیت")) {
+          errMsg = "Only sessions in 'assigned' or 'confirmed' status can be cancelled";
+        } else if (errMsg.includes("تنها دانشجو یا اساتید")) {
+          errMsg = "Only the student or assigned faculty members are authorized to cancel this session";
+        } else {
+          errMsg = "Failed to cancel defense session";
+        }
+      }
+      return apiError(result.code as any, errMsg, result.status || 400);
     }
 
     return apiSuccess({

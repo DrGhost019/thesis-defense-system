@@ -80,6 +80,9 @@ export function RequestsView() {
     if (raw.includes("بازه زمانی یافت نشد") || raw.includes("Time slot not found")) {
       return t.adminRequests.slotNotFoundError;
     }
+    if (lang === "en" && /[\u0600-\u06FF]/.test(raw)) {
+      return "An error occurred while processing the request";
+    }
     return raw || (lang === "fa" ? "خطایی رخ داد" : "An error occurred");
   };
 

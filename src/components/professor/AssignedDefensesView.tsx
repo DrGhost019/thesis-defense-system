@@ -57,6 +57,9 @@ export function AssignedDefensesView() {
     if (raw.includes("قبلاً ثبت شده") || raw.includes("already been recorded")) {
       return t.assignedDefenses.decisionAlreadyRecordedError;
     }
+    if (lang === "en" && /[\u0600-\u06FF]/.test(raw)) {
+      return t.assignedDefenses.genericError;
+    }
     return raw || (lang === "fa" ? "خطایی رخ داد" : "An error occurred");
   };
 

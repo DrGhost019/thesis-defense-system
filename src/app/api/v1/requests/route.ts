@@ -32,12 +32,22 @@ export async function POST(req: NextRequest) {
     const body = await req.json().catch(() => ({}));
     const parsed = CreateRequestSchema.safeParse(body);
     if (!parsed.success) {
-      return handleZodError(parsed.error);
+      return handleZodError(parsed.error, isEn);
     }
 
     const result = await RequestService.submit(authUser.userId, parsed.data.note);
     if (!result.success) {
-      return apiError(result.code as any, result.message!, result.status || 400);
+      let errMsg = result.message || "";
+      if (isEn) {
+        if (errMsg.includes("فعال")) {
+          errMsg = "You already have an active defense request in the system";
+        } else if (errMsg.includes("ناقص")) {
+          errMsg = "Your profile is incomplete. Please complete your degree level and thesis title first";
+        } else {
+          errMsg = "Failed to submit defense request";
+        }
+      }
+      return apiError(result.code as any, errMsg, result.status || 400);
     }
 
     return apiSuccess(result.session, 201);

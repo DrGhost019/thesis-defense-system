@@ -46,6 +46,9 @@ export function MessagesView({ initialSessionId }: { initialSessionId?: number }
     if (raw.includes("دسترسی به پیام‌های این جلسه را ندارید") || raw.includes("access")) {
       return t.messages.noAccessError;
     }
+    if (lang === "en" && /[\u0600-\u06FF]/.test(raw)) {
+      return t.messages.noAccessError || "An error occurred while sending message";
+    }
     return raw || (lang === "fa" ? "خطایی رخ داد" : "An error occurred");
   };
 
@@ -91,7 +94,10 @@ export function MessagesView({ initialSessionId }: { initialSessionId?: number }
     mutationFn: async (text: string) => {
       const res = await fetch(`/api/v1/sessions/${effectiveSessionId}/messages`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Accept-Language": lang,
+        },
         body: JSON.stringify({ content: text }),
       });
       const data = await res.json();

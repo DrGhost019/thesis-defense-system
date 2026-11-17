@@ -53,6 +53,9 @@ export function AccountsView() {
     if (raw.includes("شماره دانشجویی") || raw.includes("student number")) {
       return lang === "fa" ? "شماره دانشجویی قبلاً در سیستم ثبت شده است" : "Student number already exists in the system";
     }
+    if (lang === "en" && /[\u0600-\u06FF]/.test(raw)) {
+      return t.common.error;
+    }
     return raw || t.common.error;
   };
 

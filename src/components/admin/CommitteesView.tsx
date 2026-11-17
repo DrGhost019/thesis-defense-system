@@ -67,6 +67,9 @@ export function CommitteesView() {
         ? "امکان حذف هیئت داوران دارای جلسات دفاع فعال وجود ندارد"
         : "Cannot delete an evaluation committee with active defense sessions";
     }
+    if (lang === "en" && /[\u0600-\u06FF]/.test(raw)) {
+      return t.common.error;
+    }
     return raw || t.common.error;
   };
 

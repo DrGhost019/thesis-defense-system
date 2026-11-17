@@ -73,6 +73,9 @@ export function MyRequestView({
     if (raw.includes("فقط جلسات در وضعیت") || raw.includes("status")) {
       return t.student.onlyAssignedOrConfirmedError;
     }
+    if (lang === "en" && /[\u0600-\u06FF]/.test(raw)) {
+      return t.student.genericError;
+    }
     return raw || (lang === "fa" ? "خطایی رخ داد" : "An error occurred");
   };
 

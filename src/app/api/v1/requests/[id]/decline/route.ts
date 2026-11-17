@@ -40,12 +40,24 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     const body = await req.json();
     const parsed = DeclineRequestSchema.safeParse(body);
     if (!parsed.success) {
-      return handleZodError(parsed.error);
+      return handleZodError(parsed.error, isEn);
     }
 
     const result = await AssignmentService.decline(sessionId, parsed.data.reason, authUser.userId);
     if (!result.success) {
-      return apiError(result.code as any, result.message!, result.status || 400);
+      let errMsg = result.message || "";
+      if (isEn) {
+        if (errMsg.includes("یافت نشد")) {
+          errMsg = "Defense request not found";
+        } else if (errMsg.includes("۵ کاراکتر")) {
+          errMsg = "Decline reason must be at least 5 characters";
+        } else if (errMsg.includes("درخواست شده")) {
+          errMsg = "Only requests in 'requested' status can be declined";
+        } else {
+          errMsg = "Failed to decline defense request";
+        }
+      }
+      return apiError(result.code as any, errMsg, result.status || 400);
     }
 
     return apiSuccess({

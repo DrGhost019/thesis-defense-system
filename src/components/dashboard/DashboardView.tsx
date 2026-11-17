@@ -76,7 +76,7 @@ export function DashboardView({ onNavigate }: { onNavigate: (tab: TabId) => void
 
           <div className="space-y-2.5">
             {notices.map((n: any) => {
-              const noticeTitle =
+              let noticeTitle =
                 lang === "en"
                   ? n.titleEn ||
                     (n.id === "admin_pending"
@@ -95,6 +95,24 @@ export function DashboardView({ onNavigate }: { onNavigate: (tab: TabId) => void
                       ? `${n.count || data?.stats?.failedNotificationsCount || 0} Bale notification${(n.count || data?.stats?.failedNotificationsCount || 0) > 1 ? "s" : ""} failed delivery.`
                       : n.text)
                   : n.textFa || n.text;
+
+              if (lang === "en" && /[\u0600-\u06FF]/.test(noticeTitle)) {
+                if (n.id?.startsWith("seat_")) noticeTitle = "New Defense Review Request";
+                else if (n.id?.startsWith("req_")) noticeTitle = "Request Awaiting Review";
+                else if (n.id?.startsWith("assign_")) noticeTitle = "Defense Date Assigned";
+                else if (n.id?.startsWith("conf_")) noticeTitle = "Defense Session Confirmed";
+                else if (n.id === "admin_pending") noticeTitle = "Requests Awaiting Assignment";
+                else if (n.id === "admin_failed_notif") noticeTitle = "Bale Messenger Delivery Failures";
+                else noticeTitle = "System Notification";
+              }
+
+              if (lang === "en" && /[\u0600-\u06FF]/.test(noticeText)) {
+                if (n.id?.startsWith("seat_")) noticeText = "A defense session has been assigned to you and awaits your evaluation.";
+                else if (n.id?.startsWith("req_")) noticeText = "Your defense request has been submitted and is currently queued for academic review.";
+                else if (n.id?.startsWith("assign_")) noticeText = "Your defense date has been scheduled and is awaiting examiner approval.";
+                else if (n.id?.startsWith("conf_")) noticeText = "Your defense session is confirmed. You can communicate with the evaluation committee via messages.";
+                else noticeText = "A system update is available for your account.";
+              }
 
               if (lang === "fa") {
                 noticeText = toPersianDigits(noticeText);

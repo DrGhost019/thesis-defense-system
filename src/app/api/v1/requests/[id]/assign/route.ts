@@ -40,7 +40,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     const body = await req.json();
     const parsed = AssignRequestSchema.safeParse(body);
     if (!parsed.success) {
-      return handleZodError(parsed.error);
+      return handleZodError(parsed.error, isEn);
     }
 
     const result = await AssignmentService.assign(
@@ -51,7 +51,31 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     );
 
     if (!result.success) {
-      return apiError(result.code as any, result.message!, result.status || 400);
+      let errMsg = result.message || "";
+      if (isEn) {
+        if (errMsg.includes("یافت نشد") && errMsg.includes("درخواست")) {
+          errMsg = "Defense request not found";
+        } else if (errMsg.includes("بازه زمانی یافت نشد")) {
+          errMsg = "Time slot not found or has been withdrawn";
+        } else if (errMsg.includes("درخواست شده")) {
+          errMsg = "Only requests in 'requested' status can be assigned";
+        } else if (errMsg.includes("فردا")) {
+          errMsg = "Scheduled date must be at least tomorrow";
+        } else if (errMsg.includes("مطابقت ندارد")) {
+          errMsg = "Selected date does not match the recurrence pattern of this slot";
+        } else if (errMsg.includes("رزرو شده")) {
+          errMsg = "This time slot is already booked for another session on this date";
+        } else if (errMsg.includes("غیرفعال")) {
+          errMsg = "The evaluation committee for this slot is deactivated";
+        } else if (errMsg.includes("هیچ استاد فعالی")) {
+          errMsg = "No active faculty members defined for this slot";
+        } else if (errMsg.includes("تداخل زمانی")) {
+          errMsg = "Faculty scheduling conflict: one or more professors already have a session at this time";
+        } else {
+          errMsg = "Failed to assign defense session";
+        }
+      }
+      return apiError(result.code as any, errMsg, result.status || 400);
     }
 
     return apiSuccess({
