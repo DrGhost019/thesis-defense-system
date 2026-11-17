@@ -13,8 +13,11 @@
     "prisma:deploy": "prisma migrate deploy",
     "prisma:db-push": "prisma db push",
     "seed": "tsx scripts/seed.ts",
+    "bot:start": "tsx scripts/bale-bot.ts",
+    "bot:webhook": "tsx scripts/bale-webhook.ts",
     "reminders:cron": "tsx scripts/daily-reminders.ts",
     "test:auth-matrix": "tsx scripts/test-auth-matrix.ts",
+    "test:bale-bot": "tsx scripts/test-bale-bot.ts",
     "openapi:generate": "tsx scripts/generate-openapi.ts"
   },
   "dependencies": {

@@ -56,6 +56,8 @@ export function ReportsView() {
   const failedNotifications: any[] = data?.failedNotifications || [];
   const unlinkedUsers: any[] = data?.unlinkedUsers || [];
 
+  const [isRetrying, setIsRetrying] = useState(false);
+
   const handleRefresh = async () => {
     try {
       await refetch();
@@ -63,9 +65,39 @@ export function ReportsView() {
       setErrorMessage(null);
       setCautionMessage(null);
     } catch {
-      setErrorMessage(lang === "en" ? "Failed to load reports" : "خطا در بارگذاری گزارش‌ها");
+      setErrorMessage(lang === "en" ? "Failed to load reports." : "خطا در بارگذاری گزارش‌ها");
       setSuccessMessage(null);
       setCautionMessage(null);
+    }
+  };
+
+  const handleRetryFailed = async () => {
+    setIsRetrying(true);
+    try {
+      const res = await fetch("/api/v1/admin/reports/retry", {
+        method: "POST",
+        headers: { "Accept-Language": lang },
+      });
+      const result = await res.json();
+      if (!res.ok) {
+        throw new Error(result.message || (lang === "en" ? "Failed to retry notifications." : "خطا در تلاش مجدد اعلان‌ها"));
+      }
+      await refetch();
+      if (result.failed > 0 && result.sent === 0) {
+        setErrorMessage(result.message);
+        setSuccessMessage(null);
+        setCautionMessage(null);
+      } else {
+        setSuccessMessage(result.message);
+        setErrorMessage(null);
+        setCautionMessage(null);
+      }
+    } catch (err: any) {
+      setErrorMessage(err.message || (lang === "en" ? "Failed to retry notifications." : "خطا در تلاش مجدد اعلان‌ها"));
+      setSuccessMessage(null);
+      setCautionMessage(null);
+    } finally {
+      setIsRetrying(false);
     }
   };
 
@@ -106,13 +138,25 @@ export function ReportsView() {
           </p>
         </div>
 
-        <button
-          onClick={handleRefresh}
-          className="flex items-center gap-1.5 px-3.5 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-semibold transition"
-        >
-          <RefreshCw className="w-3.5 h-3.5" />
-          <span>{t.common.refresh}</span>
-        </button>
+        <div className="flex items-center gap-2">
+          {failedNotifications.length > 0 && (
+            <button
+              onClick={handleRetryFailed}
+              disabled={isRetrying}
+              className="flex items-center gap-1.5 px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold transition disabled:opacity-60"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isRetrying ? "animate-spin" : ""}`} />
+              <span>{isRetrying ? t.reports.retrying : t.reports.retryAllBtn}</span>
+            </button>
+          )}
+          <button
+            onClick={handleRefresh}
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-semibold transition"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            <span>{t.common.refresh}</span>
+          </button>
+        </div>
       </div>
 
       {successMessage && (

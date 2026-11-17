@@ -1,3 +1,5 @@
+process.env.BALE_TEST_MODE = "true";
+
 import prisma from "../src/lib/prisma";
 import { AuthService } from "../src/services/AuthService";
 import { SlotService } from "../src/services/SlotService";
@@ -7,6 +9,8 @@ import { AssignmentService } from "../src/services/AssignmentService";
 import { ResponseService } from "../src/services/ResponseService";
 import { CancellationService } from "../src/services/CancellationService";
 import { MessageService } from "../src/services/MessageService";
+import { expandSlotOccurrences, getTehranDate, toTehranDateString } from "../src/lib/date-utils";
+import { addDays } from "date-fns";
 
 let passed = 0;
 let failed = 0;
@@ -138,11 +142,28 @@ async function runTests() {
     where: { committee_id: { not: null }, status: "available" },
   });
 
+  // Compute the first valid future occurrence (>= tomorrow in Asia/Tehran) for commSlot
+  const tomorrowStr = toTehranDateString(addDays(getTehranDate(), 1));
+  const twoWeeksOutStr = toTehranDateString(addDays(getTehranDate(), 14));
+  const futureOccurrences = expandSlotOccurrences(
+    {
+      slot_type: commSlot!.slot_type,
+      slot_date: commSlot!.slot_date,
+      recurrence_pattern: commSlot!.recurrence_pattern,
+      weekday: commSlot!.weekday,
+      valid_from: commSlot!.valid_from,
+      valid_until: commSlot!.valid_until,
+    },
+    tomorrowStr,
+    twoWeeksOutStr
+  );
+  const assignDate = futureOccurrences[0];
+
   // T15: Assign committee slot with members -> creates seats
   const assignResult = await AssignmentService.assign(
     student1Session!.session_id,
     commSlot!.slot_id,
-    "2026-11-18", // Wednesday (Even day, >= tomorrow)
+    assignDate,
     admin!.user_id
   );
   assert(assignResult.success === true, "T15a: Assignment of committee slot succeeds");
@@ -160,7 +181,7 @@ async function runTests() {
   const doubleAssign = await AssignmentService.assign(
     req2.session!.session_id,
     commSlot!.slot_id,
-    "2026-11-18", // Same occurrence!
+    assignDate, // Same occurrence!
     admin!.user_id
   );
   assert(doubleAssign.success === false && doubleAssign.status === 409, "T13: Double booking same occurrence refused with 409 CONFLICT");

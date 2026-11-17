@@ -1,4 +1,5 @@
 import * as argon2 from "argon2";
+import { randomInt } from "crypto";
 import { SignJWT, jwtVerify } from "jose";
 import { Role } from "@prisma/client";
 
@@ -78,13 +79,13 @@ export async function verifyRefreshToken(token: string): Promise<TokenPayload | 
 }
 
 /**
- * Generates an 8-character Bale link code excluding 0, O, 1, I (Appendix D.8)
+ * Generates a cryptographically random 8-character Bale link code excluding 0, O, 1, I (Appendix D.8)
  */
 export function generateBaleLinkCode(): string {
   const chars = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
   let code = "";
   for (let i = 0; i < 8; i++) {
-    code += chars.charAt(Math.floor(Math.random() * chars.length));
+    code += chars.charAt(randomInt(0, chars.length));
   }
   return code;
 }

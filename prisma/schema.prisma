@@ -77,11 +77,14 @@ model User {
   full_name             String         @db.VarChar(120)
   role                  Role
   is_active             Boolean        @default(true)
-  bale_chat_id          String?        @unique @db.VarChar(32)
-  bale_linked_at        DateTime?
-  bale_link_code        String?        @db.VarChar(12)
-  bale_link_expires_at  DateTime?
-  created_at            DateTime       @default(now())
+  bale_chat_id               String?        @unique @db.VarChar(32)
+  bale_linked_at             DateTime?
+  bale_link_code             String?        @db.VarChar(12)
+  bale_link_expires_at       DateTime?
+  bale_link_code_count       Int            @default(0)
+  bale_link_code_window_start DateTime?
+  preferred_lang             String         @default("fa") @db.VarChar(5)
+  created_at                 DateTime       @default(now())
 
   student               Student?
   professor             Professor?
@@ -222,6 +225,8 @@ model Notification {
   status            NotificationStatus @default(pending)
   failure_reason    String?            @db.VarChar(200)
   retry_count       Int                @default(0)
+  last_attempt_at   DateTime?
+  next_retry_at     DateTime?
 
   @@unique([session_id, recipient_user_id, type])
 }

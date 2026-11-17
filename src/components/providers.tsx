@@ -102,6 +102,13 @@ export function Providers({ children }: { children: React.ReactNode }) {
       document.documentElement.dir = newLang === "fa" ? "rtl" : "ltr";
       document.documentElement.lang = newLang;
       document.body.dir = newLang === "fa" ? "rtl" : "ltr";
+      if (user) {
+        fetch("/api/v1/me", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ preferredLang: newLang }),
+        }).catch(() => {});
+      }
     }
   };
 
