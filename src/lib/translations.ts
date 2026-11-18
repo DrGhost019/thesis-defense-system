@@ -44,7 +44,7 @@ export const translations = {
       gregorianCalendar: "تقویم میلادی",
       toggleTheme: "تغییر تم",
       logout: "خروج از حساب",
-      academicYear: "سال تحصیلی ۱۴۰۵-۱۴۰۶ • کلیه حقوق محفوظ است.",
+      academicYear: "تمام حقوق مادی و معنوی مطالب این وب‌سایت متعلق به دانشگاه اراک است.",
       footerSystem: "سامانه جامع زمان‌بندی دفاع پایان‌نامه‌ها و رساله‌ها",
     },
 
@@ -566,7 +566,7 @@ export const translations = {
       gregorianCalendar: "Gregorian Calendar",
       toggleTheme: "Toggle Theme",
       logout: "Sign Out",
-      academicYear: "Academic Year 2026-2027 • All Rights Reserved.",
+      academicYear: "All material and intellectual property rights of this website belong to Arak University.",
       footerSystem: "Comprehensive Thesis Defense Scheduling System",
     },
 

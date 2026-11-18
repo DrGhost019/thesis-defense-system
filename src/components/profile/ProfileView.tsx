@@ -11,7 +11,6 @@ import {
   CheckCircle,
   Copy,
   Clock,
-  Send,
   Unlink,
   AlertCircle,
   Smartphone,
@@ -499,11 +498,26 @@ export function ProfileView() {
                       href={botUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-xs font-bold transition shadow-sm"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#4cebb4] hover:bg-[#3adca4] border border-[#34c995] text-black dark:bg-[#0f6b50] dark:hover:bg-[#148564] dark:border-[#1fa07a] dark:text-white rounded-lg text-xs font-bold leading-none transition shadow-sm"
                     >
-                      <Send className="w-3.5 h-3.5" />
-                      <span dir="ltr">@{botUsername}</span>
-                      <ExternalLink className="w-3 h-3" />
+                      <img
+                        src="/assets/bale-svgrepo-com%20(1).svg"
+                        alt="Bale"
+                        className="w-3.5 h-3.5 block flex-shrink-0 dark:hidden"
+                      />
+                      <img
+                        src="/assets/bale-svgrepo-com-white.svg"
+                        alt="Bale"
+                        className="w-3.5 h-3.5 block flex-shrink-0 hidden dark:block"
+                      />
+                      <span
+                        dir="ltr"
+                        className="leading-none translate-y-[1px]"
+                        style={{ fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}
+                      >
+                        @{botUsername}
+                      </span>
+                      <ExternalLink className="w-3 h-3 flex-shrink-0" />
                     </a>
                   </div>
                   <ol className="list-decimal list-inside space-y-1 text-[11px] text-blue-800 dark:text-blue-300">
@@ -624,11 +638,26 @@ export function ProfileView() {
                   href={botUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-sky-50 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-800 text-sky-700 dark:text-sky-300 hover:bg-sky-100 dark:hover:bg-sky-900/50 rounded-xl text-xs sm:text-sm font-bold transition"
+                  className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-[#4cebb4] hover:bg-[#3adca4] border border-[#34c995] text-black dark:bg-[#0f6b50] dark:hover:bg-[#148564] dark:border-[#1fa07a] dark:text-white rounded-xl text-xs sm:text-sm font-bold leading-none transition shadow-sm"
                 >
-                  <Send className="w-4 h-4" />
-                  <span dir="ltr">@{botUsername}</span>
-                  <ExternalLink className="w-3.5 h-3.5" />
+                  <img
+                    src="/assets/bale-svgrepo-com%20(1).svg"
+                    alt="Bale"
+                    className="w-4 h-4 block flex-shrink-0 dark:hidden"
+                  />
+                  <img
+                    src="/assets/bale-svgrepo-com-white.svg"
+                    alt="Bale"
+                    className="w-4 h-4 block flex-shrink-0 hidden dark:block"
+                  />
+                  <span
+                    dir="ltr"
+                    className="leading-none translate-y-[1px]"
+                    style={{ fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}
+                  >
+                    @{botUsername}
+                  </span>
+                  <ExternalLink className="w-3.5 h-3.5 flex-shrink-0" />
                 </a>
               </div>
             )}

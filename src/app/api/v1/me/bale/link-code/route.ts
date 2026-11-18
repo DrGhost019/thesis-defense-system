@@ -1,9 +1,11 @@
 import { NextRequest } from "next/server";
 import { getAuthenticatedUser } from "@/lib/server-auth";
 import { AuthService } from "@/services/AuthService";
+import { BalePoller } from "@/services/BalePoller";
 import { apiSuccess, apiError } from "@/lib/api-response";
 
 export async function POST(req: NextRequest) {
+  BalePoller.ensureStarted();
   const isEn = req.headers.get("accept-language")?.startsWith("en");
 
   const authUser = await getAuthenticatedUser(req);

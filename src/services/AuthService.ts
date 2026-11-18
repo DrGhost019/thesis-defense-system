@@ -264,7 +264,11 @@ export class AuthService {
    * Completes linking a Bale chat ID via one-time link code (Appendix D.8, Edge Cases #17 & #18).
    */
   public static async completeBaleLink(code: string, chatId: string) {
-    const trimmedCode = code.trim().toUpperCase();
+    const trimmedCode = code
+      .trim()
+      .replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 0x06f0))
+      .replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 0x0660))
+      .toUpperCase();
     const trimmedChatId = String(chatId).trim();
 
     if (!trimmedCode || !trimmedChatId) {

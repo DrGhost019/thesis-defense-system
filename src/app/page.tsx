@@ -154,8 +154,8 @@ export default function HomePage() {
           <div>
             <span>
               {lang === "fa"
-                ? "سال تحصیلی ۱۴۰۵-۱۴۰۶ • کلیه حقوق محفوظ است."
-                : "Academic Year 2026-2027 • All Rights Reserved."}
+                ? "تمام حقوق مادی و معنوی مطالب این وب‌سایت متعلق به دانشگاه اراک است."
+                : "All material and intellectual property rights of this website belong to Arak University."}
             </span>
           </div>
         </div>
