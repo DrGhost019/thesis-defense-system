@@ -498,7 +498,7 @@ export function ProfileView() {
                       href={botUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#4cebb4] hover:bg-[#3adca4] border border-[#34c995] text-black dark:bg-[#0f6b50] dark:hover:bg-[#148564] dark:border-[#1fa07a] dark:text-white rounded-lg text-xs font-bold leading-none transition shadow-sm"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#4cebb4] hover:bg-[#3adca4] border border-[#34c995] text-black dark:bg-[#0f6b50] dark:hover:bg-[#148564] dark:border-[#1fa07a] dark:text-white rounded-lg text-xs font-bold transition shadow-sm"
                     >
                       <img
                         src="/assets/bale-svgrepo-com%20(1).svg"
@@ -510,13 +510,7 @@ export function ProfileView() {
                         alt="Bale"
                         className="w-3.5 h-3.5 block flex-shrink-0 hidden dark:block"
                       />
-                      <span
-                        dir="ltr"
-                        className="leading-none translate-y-[1px]"
-                        style={{ fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}
-                      >
-                        @{botUsername}
-                      </span>
+                      <span dir="ltr">@{botUsername}</span>
                       <ExternalLink className="w-3 h-3 flex-shrink-0" />
                     </a>
                   </div>
@@ -638,7 +632,7 @@ export function ProfileView() {
                   href={botUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-[#4cebb4] hover:bg-[#3adca4] border border-[#34c995] text-black dark:bg-[#0f6b50] dark:hover:bg-[#148564] dark:border-[#1fa07a] dark:text-white rounded-xl text-xs sm:text-sm font-bold leading-none transition shadow-sm"
+                  className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-[#4cebb4] hover:bg-[#3adca4] border border-[#34c995] text-black dark:bg-[#0f6b50] dark:hover:bg-[#148564] dark:border-[#1fa07a] dark:text-white rounded-xl text-xs sm:text-sm font-bold transition shadow-sm"
                 >
                   <img
                     src="/assets/bale-svgrepo-com%20(1).svg"
@@ -650,13 +644,7 @@ export function ProfileView() {
                     alt="Bale"
                     className="w-4 h-4 block flex-shrink-0 hidden dark:block"
                   />
-                  <span
-                    dir="ltr"
-                    className="leading-none translate-y-[1px]"
-                    style={{ fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}
-                  >
-                    @{botUsername}
-                  </span>
+                  <span dir="ltr">@{botUsername}</span>
                   <ExternalLink className="w-3.5 h-3.5 flex-shrink-0" />
                 </a>
               </div>

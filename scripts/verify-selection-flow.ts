@@ -43,8 +43,8 @@ async function verifySelectionFlow() {
   await submitBtn.click();
   await page.waitForTimeout(400);
 
-  // Check error message
-  const errorText = await page.locator(".bg-red-50").innerText();
+  // Check error message (amber warning banner for CAPTCHA)
+  const errorText = await page.locator(".bg-amber-50, .bg-red-50").first().innerText();
   console.log(`Enforced CAPTCHA Warning Message: "${errorText.trim()}"`);
 
   // 6. Click on another option (e.g. "علی علوی") to test selection switching
